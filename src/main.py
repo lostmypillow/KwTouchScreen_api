@@ -6,9 +6,8 @@ from .seat import Seat
 from fastapi.responses import FileResponse
 from fastapi import FastAPI
 from datetime import datetime
-from .classroom import Classroom
-from .database import Database
-import base64
+from .database import execute_SQL
+from .employee import get_voted_emp_by_student
 
 
 def get_classes_of_period(period: int):
@@ -46,6 +45,8 @@ async def stu_name():
     # print(result)
 
     # Classroom().get_scheduled(1, '2023/08/15')
+    print(get_voted_emp_by_student())
+
     
 
 
