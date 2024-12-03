@@ -1,4 +1,4 @@
-from .database import Database
+from .database import execute_SQL
 
 
 class Student:
@@ -11,7 +11,7 @@ class Student:
 
     def _get_name_and_gender(self, id):
         # def getStudentName(self, id):
-        details = Database.execute_SQL('student_details', {"id": id})
+        details = execute_SQL('student_details', {"id": id})
         self.student_id = details[0]
         self.name = details[1]
 
@@ -22,7 +22,7 @@ class Student:
 
     def get_classes(self):
         # def getClasses(self, id):
-        classes = Database.execute_SQL(
+        classes = execute_SQL(
             'student_class', {"id": self.student_id}, 'all')
         # unknown method
 
@@ -35,7 +35,7 @@ class Student:
         else:
             print('ERROR: Attempting to get seats without gender')
             return
-        result = Database.execute_SQL(param, {
+        result = execute_SQL(param, {
             'classroom_id': classroom_id
         }, 'all')
         result_dict = [
