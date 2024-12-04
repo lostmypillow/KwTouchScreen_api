@@ -12,7 +12,7 @@ WHERE
         FROM 
             學生欠費
         WHERE 
-            學號 = :id
+            學號 = :student_id
             AND (欠費 <= 0 OR 金額 >= 3000)
     )
     AND GETDATE() BETWEEN [學生補位主檔].開始時間 AND [學生補位主檔].結束時間
