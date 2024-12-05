@@ -5,5 +5,5 @@ SELECT
 FROM
     學生資料
 WHERE
-    學號 = :id
-    OR 卡號 = :id
+    學號 = :card_id
+    OR 卡號 = :card_id

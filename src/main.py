@@ -3,11 +3,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
 from apscheduler.triggers.cron import CronTrigger
 from .employee import Employee
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from .database import execute_SQL
-from .employee import get_voted_emp_by_student
+from io import BytesIO
 
 
 def get_classes_of_period(period: int):
@@ -52,31 +52,45 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get('/seat/{card_id}')
-async def stu_name(card_id: int):
-    student = Student(card_id)
+@app.get('/seats/{student_id}', tags=["Seats"])
+def get_available_seats(student_id: str):
+    student = Student(student_id)
     if student.name == None:
         raise HTTPException(status_code=404, detail="查無此人")
     elif student.classes == None:
         raise HTTPException(status_code=404, detail="目前沒有您可選的補位資料,請洽總導師。")
-
-    # example_stu = Student(str(id))
-    # result = Database.execute_SQL(
-    #     'student_class', {"id": example_stu.student_id}, 'all')
-    # print(result)
-
-    # Classroom().get_scheduled(1, '2023/08/15')
-
-
-@app.get('/survey')
-return 'ok'
+    else:
+        return {
+            "id": student.student_id,
+            "name": student.name,
+            "gender": student.gender,
+            "classes": student.classes
+        }
 
 
-@app.get('/employee/pic/{id}')
-def get_employee_image(id: int):
+@app.post('/seats/{student_id}/{sn}', tags=["Seats"])
+def register_seat(student_id: str, sn: str):
+    Student(student_id).register_seat(sn)
+    # NO ERROR HANDLING HERE...YET?
+    return "選擇完成"
+
+
+@app.get('/survey/employees/{student_id}', tags=['Survey'])
+def get_employees(student_id:str, departments: str):
+    return Employee.working_today(
+        '2020-09-16',
+        'all',
+        Student(student_id).voted_employees)
+
+
+@app.get('/picture/{role}/{id}', tags=["Pictures"])
+def get_employee_image(role:str, id: str):
     # def GetTodayEmployeePhotoByID(self, id):
-    data = Database.execute_SQL('employee_image', {"id": id})
-    print(type(data.照片))
-    with open('image.png', 'wb') as file:
-        file.write(data.照片)
-    return FileResponse('image.png')
+    image_stream = BytesIO(execute_SQL(role+ '_image', "one", id=id).照片)
+    image_stream.seek(0)
+    return StreamingResponse(
+        content=image_stream,
+        media_type="image/png",
+        headers={"Content-Disposition": "inline; filename=image.png"}
+    )
+

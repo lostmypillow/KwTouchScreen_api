@@ -22,22 +22,23 @@ def get_remaining_seats():
 
 class Student:
 
-    def __init__(self, card_id) -> None:
-        self.student_id = 0
+    def __init__(self, student_id) -> None:
+        self.student_id = student_id
         self.name = None
         self.gender = None
         self.classes = None
-        self._get_name_and_gender(card_id)
+        self._get_name_and_gender()
         self._get_classes()
 
-    def _get_name_and_gender(self, card_id):
+    def _get_name_and_gender(self):
         # def getStudentName(self, id):
         details = execute_SQL(
             'student_details',
-            card_id=card_id
+            'one',
+            card_id=self.student_id
         )
-        self.student_id = details[0]
-        self.name = details[1]
+        self.student_id = details[0].strip()
+        self.name = details[1].strip()
 
         if details[2] == '女':
             self.gender = 'female'
@@ -46,56 +47,71 @@ class Student:
 
     def _get_classes(self):
         # def getClasses(self, id):
+        result = []
         if self.student_id is not None:
-            self.classes = execute_SQL(
+
+            data = execute_SQL(
                 'get_classes',
                 'all',
                 student_id=self.student_id
             )
+            for item in data:
 
+                already_selected_today = True if execute_SQL('already_selected_today',
+                                                             'one',
+                                                             student_id=self.student_id,
+                                                             class_id=item[3]
+                                                             ) else False
+                sql_file = 'student_seats_male' if self.gender == 'male' else 'student_seats_female'
+                available_seats = execute_SQL(sql_file,
+                                              'all',
+                                              class_id=item[3])
 
-    def selected_seat(self, class_id: int):
-        #  def is_select_seat_today(self, student_id, class_id):
-        return True if execute_SQL(
-            'selected_seat',
-            'one',
-            student_id=self.student_id,
-            class_id=class_id
+                if not already_selected_today and available_seats is not None:
+                    result = [{
+                        "name": item[0],
+                        "sn": item[1],
+                        "班別代碼": int(item[2].strip()),
+                        "班級代碼": item[3],
+                        "start_date": item[4].strftime('%Y-%m-%d %H:%M:%S'),
+                        "who_set_it": item[5],
+                        "starts_on": item[6].strftime('%Y-%m-%d %H:%M:%S'),
+                        "ends_on": item[7].strftime('%Y-%m-%d %H:%M:%S'),
+                        "set_on": item[8].strftime('%Y-%m-%d %H:%M:%S'),
+                        "seats": [
+                            {
+                                "sn": seat[0],
+                                "主檔號": seat[1],
+                                "座位號": seat[2]
+                            } for seat in available_seats
+                        ]
+                    } for item in data]
 
-        ) else False
-    
-    
-    def get_seats(self, classroom_id: int):
-        # getSeats(self, classroom_id):
-        if self.gender == 'female':
-            param = 'student_seats_female'
-        elif self.gender == 'male':
-            param = 'student_seats_male'
-        else:
-            print('ERROR: Attempting to get seats without gender')
-            return
-        result = execute_SQL(param, {
-            'classroom_id': classroom_id
-        }, 'all')
-        result_dict = [
-            {
-                "sn": t[0],
-                "seat_num": t[2],
-                "student_id": t[3],
-                "register_time": t[4]
-            }
-            for t in result
-        ]
+        self.classes = result
 
-        return result_dict
-
-    def register_student(self, seat_id):
+    def register_seat(self, sn):
         # def add_class_seat_record(self, student_id, seat_id):
-        execute_SQL(
-            'add_student_seat', 'commit', student_id=self.student_id,
-            seat_id=seat_id
+        execute_SQL('register-seat',
+                    'commit',
+                    student_id=self.student_id,
+                    sn=sn
+                    )
 
+    @property
+    def voted_employees(self):
+        #  def GetVotedEmployeeByStudentIdWeekly(self, student_id):
+        # today = datetime.now()
+        today = datetime(2020, 9, 16).date()
+        weekday = today.weekday()
+        # monday = (today - timedelta(days=weekday)).strftime("%Y-%m-%d")
+        monday = '2020-09-14 00:00:00.000'
+        result = execute_SQL(
+            'voted_employees',
+            'all',
+            monday=monday,
+            student_id=self.student_id
         )
+        return [x[0].strip() for x in result]
 
     def sent_survey_today(self, query_type: str = 'standard'):
         #  def isStudentUsedToday(self, studentId):

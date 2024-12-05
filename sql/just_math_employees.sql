@@ -12,5 +12,5 @@ WHERE
             員工刷卡班表
         WHERE
             上班日期 = :current_date)
-            AND 主要部門 IN :departments
+            AND 主要部門 = '9'
             AND 職務別 <> 1
