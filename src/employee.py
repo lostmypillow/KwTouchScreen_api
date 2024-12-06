@@ -2,6 +2,17 @@ from .database import execute_SQL
 from datetime import datetime, timedelta
 
 
+def dep_name_from_num(dep_num: int):
+    deps = {
+        "招生部": 2,
+        "櫃台": 4,
+        "補課教室": 8,
+        "數輔": 9,
+        "導師組": 11
+    }
+    name = list(deps.keys())
+    [list(deps.values()).index(dep_num)]
+    return name
 
 
 class Employee:
@@ -10,42 +21,30 @@ class Employee:
         self.picture = None
 
     @property
-    def department(self):
-        return execute_SQL(
-            'get_department',
+    def dep_number(self):
+        return int(execute_SQL(
+            'employee/department',
             'one',
             employee_id=self.card_id
-        )
+        )[0])
 
     @staticmethod
-    def working_today(current_date: str, departments: str, excluded_employees: list):
+    def working_today(voted_employees: list):
         # def GetTodayEmployeeDepartment(self):
         # def GetTodayEmployeesData(self):
         # def GetTodayEmployeeDepartment(self):
         #  def GetTodayTeacherData(self):
 
-        # [('200900 ', '林禹馨', 8), ('200952 ', '朱彥妃', 11), ('200979 ', '唐翊倫', 8), ('200996 ', '梁嘉芸', 4), ('201012 ', '劉昭琪', 2), ('201019 ', '蔡東穎', 11), ('201021 ', '江佳儀', 8), ('200728 ', '廖信瑜', 11), ('200779 ', '鄭羽雯', 11), ('200805 ', '鄭炳烽', 8), ('200935 ', '張晏綺', 11)]
-        deps = {
-            "招生部": 2,
-            "櫃台": 4,
-            "補課教室": 8,
-            "數輔": 9,
-            "導師組": 11
-        }
-        sql_file = 'all_employees' if departments == 'all' else 'math_employees'
-
         res = execute_SQL(
-            sql_file,
+            'all_employees',
             'all',
-            current_date=current_date
+            current_date='2020-09-16'
         )
 
         return [
             {
                 "id": t[0].strip(),
                 "name": t[1].strip(),
-                "department": list(deps.keys())
-                [list(deps.values()).index(t[2])]
-            } for t in res if t[0].strip() not in excluded_employees
+                "department": dep_name_from_num(t[2])
+            } for t in res if t[0].strip() not in voted_employees
         ]
-

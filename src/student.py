@@ -1,6 +1,6 @@
 from .database import execute_SQL
 from datetime import datetime, timedelta
-
+from .employee import Employee
 
 def is_system_available():
     # def is_seat_system_available(self):
@@ -124,15 +124,15 @@ class Student:
         )
         return True if result else None
 
-    def get_available_selection(self):
-        weekday = datetime.now().weekday()
-        monday = (datetime.now() - timedelta(days=weekday)
-                  ).strftime("%Y-%m-%d")
-        results = execute_SQL(
-            'get_available_selection',
-            'all',
-            monday=monday,
-            student_id=self.id
+    
+    def rate(self, employee: Employee, rating):
+        #  def addSatisfication(self, studentId, employeeId, rank):
+        execute_SQL(
+            'add_satisfaction',
+            'commit',
+            student_id=self.student_id,
+            department=employee.dep_number,
+            employee_id=employee.card_id,
+            rank=rating
         )
-        # sql_res = [i[0] for i in [2, 3, 4, 5]]
-        # return [x for x in [2, 3, 4, 5] if x not in sql_res]
+

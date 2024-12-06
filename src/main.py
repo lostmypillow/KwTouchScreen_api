@@ -8,6 +8,13 @@ from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from .database import execute_SQL
 from io import BytesIO
+from pydantic import BaseModel
+
+
+class SurveyResult(BaseModel):
+    employee_id: str
+    student_id: str
+    rating: int
 
 
 def get_classes_of_period(period: int):
@@ -54,43 +61,74 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get('/seats/{student_id}', tags=["Seats"])
 def get_available_seats(student_id: str):
-    student = Student(student_id)
+    try:
+        student = Student(student_id)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
     if student.name == None:
         raise HTTPException(status_code=404, detail="查無此人")
     elif student.classes == None:
         raise HTTPException(status_code=404, detail="目前沒有您可選的補位資料,請洽總導師。")
     else:
-        return {
-            "id": student.student_id,
-            "name": student.name,
-            "gender": student.gender,
-            "classes": student.classes
-        }
+        return student
 
 
 @app.post('/seats/{student_id}/{sn}', tags=["Seats"])
 def register_seat(student_id: str, sn: str):
-    Student(student_id).register_seat(sn)
-    # NO ERROR HANDLING HERE...YET?
+    try:
+        Student(student_id).register_seat(sn)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
     return "選擇完成"
 
 
 @app.get('/survey/employees/{student_id}', tags=['Survey'])
-def get_employees(student_id:str, departments: str):
-    return Employee.working_today(
-        '2020-09-16',
-        'all',
-        Student(student_id).voted_employees)
+def get_employees(student_id: str):
+    try:
+        working_employees = Employee.working_today(Student(student_id).voted_employees)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+    return working_employees
+
+
+@app.post('/survey', tags=['Survey'])
+def send_survey(result: SurveyResult):
+    try:
+        Student(result.student_id).rate(Employee(result.employee_id), result.rating)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+    return "填寫完成"
+
+
+@app.get('/test')
+def test():
+    print(Student('300003').get_available_selection())
+    return 'ok' 
 
 
 @app.get('/picture/{role}/{id}', tags=["Pictures"])
-def get_employee_image(role:str, id: str):
+def get_employee_image(role: str, id: str):
     # def GetTodayEmployeePhotoByID(self, id):
-    image_stream = BytesIO(execute_SQL(role+ '_image', "one", id=id).照片)
-    image_stream.seek(0)
+    try:
+        image_bytes = execute_SQL(role + '_image', "one", id=id).照片
+        image_stream = BytesIO(image_bytes)
+        image_stream.seek(0)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
     return StreamingResponse(
         content=image_stream,
         media_type="image/png",
         headers={"Content-Disposition": "inline; filename=image.png"}
     )
-

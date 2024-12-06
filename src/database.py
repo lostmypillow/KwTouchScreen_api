@@ -1,4 +1,6 @@
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi import HTTPException
 import os
 
 # Create the engine once at the module level
@@ -11,17 +13,26 @@ engine = create_engine(
 
 def execute_SQL(command_name: str, mode: str, **kwargs):
     file_path = './sql/' + command_name + '.sql'
-    with open(file_path, 'r', encoding="utf-8") as file_buffer:
-        sql_statement = file_buffer.read()
+    try:
+        with open(file_path, 'r', encoding="utf-8") as file_buffer:
+            sql_statement = file_buffer.read()
     
-    with engine.connect() as conn:
-        result = conn.execute(text(sql_statement), kwargs)
-        if mode == 'one':
-            return result.fetchone()
-        elif mode == 'all':
-            return result.fetchall()
-        elif mode == 'commit':
-            conn.commit()
-            return None
-        else:
-            raise ValueError(f"Invalid mode: {mode}. Must be 'one', 'all', or 'commit'.")
+        with engine.connect() as conn:
+            result = conn.execute(text(sql_statement), kwargs)
+            if mode == 'one':
+                return result.fetchone()
+            elif mode == 'all':
+                return result.fetchall()
+            elif mode == 'commit':
+                conn.commit()
+                return None
+            else:
+                raise ValueError(f"Invalid mode: {mode}. Must be 'one', 'all', or 'commit'.")
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"SQL file not found: {command_name}. Error: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")

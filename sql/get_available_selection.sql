@@ -1,5 +1,5 @@
 SELECT
-    滿意度
+    *
 FROM
     學生滿意度調查
 WHERE
