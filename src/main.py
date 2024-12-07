@@ -9,6 +9,7 @@ from datetime import datetime
 from .database import execute_SQL
 from io import BytesIO
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 
 class SurveyResult(BaseModel):
@@ -58,6 +59,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+origins = [
+    "http://localhost",
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get('/seats/{student_id}', tags=["Seats"])
 def get_available_seats(student_id: str):

@@ -1,6 +1,7 @@
 from .database import execute_SQL
 from datetime import datetime, timedelta
 from .employee import Employee
+from fastapi import HTTPException
 
 def is_system_available():
     # def is_seat_system_available(self):
@@ -37,6 +38,9 @@ class Student:
             'one',
             card_id=self.student_id
         )
+        if details is None:
+            raise HTTPException(status_code=404, detail="查無此人")
+
         self.student_id = details[0].strip()
         self.name = details[1].strip()
 
