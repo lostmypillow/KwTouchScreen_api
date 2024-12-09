@@ -2,7 +2,7 @@ from .database import execute_SQL
 from datetime import datetime, timedelta
 
 
-def dep_name_from_num(dep_num: int):
+def dep_name_from_num(target_value):
     deps = {
         "招生部": 2,
         "櫃台": 4,
@@ -10,9 +10,8 @@ def dep_name_from_num(dep_num: int):
         "數輔": 9,
         "導師組": 11
     }
-    name = list(deps.keys())
-    [list(deps.values()).index(dep_num)]
-    return name
+
+    return next((k for k, v in deps.items() if v == target_value), None)
 
 
 class Employee:
@@ -45,6 +44,7 @@ class Employee:
             {
                 "id": t[0].strip(),
                 "name": t[1].strip(),
-                "department": dep_name_from_num(t[2])
+                "department_number": t[2],
+                "department_name": dep_name_from_num(t[2])
             } for t in res if t[0].strip() not in voted_employees
         ]

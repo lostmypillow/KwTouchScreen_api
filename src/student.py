@@ -95,7 +95,7 @@ class Student:
 
     def register_seat(self, sn):
         # def add_class_seat_record(self, student_id, seat_id):
-        execute_SQL('register-seat',
+        execute_SQL('register_seat',
                     'commit',
                     student_id=self.student_id,
                     sn=sn

@@ -17,6 +17,10 @@ class SurveyResult(BaseModel):
     student_id: str
     rating: int
 
+class SeatModel(BaseModel):
+    student_id: str
+    sn: int
+
 
 def get_classes_of_period(period: int):
     #   def getClassroomInfo(self):
@@ -89,10 +93,12 @@ def get_available_seats(student_id: str):
         return student
 
 
-@app.post('/seats/{student_id}/{sn}', tags=["Seats"])
-def register_seat(student_id: str, sn: str):
+@app.post('/seats', tags=["Seats"])
+def register_seat(seat: SeatModel):
+    student = Student(seat.student_id)
+    print(student.name)
     try:
-        Student(student_id).register_seat(sn)
+        student.register_seat(seat.sn)
     except HTTPException as e:
         raise e
     except Exception as e:
