@@ -35,7 +35,7 @@ class Employee:
         #  def GetTodayTeacherData(self):
 
         res = execute_SQL(
-            'all_employees',
+            'employee/working_today',
             'all',
             current_date='2020-09-16'
         )
@@ -48,3 +48,5 @@ class Employee:
                 "department_name": dep_name_from_num(t[2])
             } for t in res if t[0].strip() not in voted_employees
         ]
+
+

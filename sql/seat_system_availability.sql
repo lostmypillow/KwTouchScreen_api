@@ -1,5 +1,5 @@
 SELECT
-    TOP 1 [學生補位主檔].*
+    TOP 1 *
 FROM
     [學生補位主檔]
 WHERE
