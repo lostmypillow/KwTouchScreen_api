@@ -2,31 +2,23 @@ from fastapi import FastAPI, APIRouter, HTTPException
 from ..student import Student
 from ..database import execute_SQL
 from pydantic import BaseModel
+from ..course import Course
 
 class SeatModel(BaseModel):
     student_id: str
     sn: int
+
 
 router = APIRouter(
     prefix="/seats",
     tags=["Seats"],
 )
 
-
 @router.get('/remaining')
-def get_remaining_seats():
+def get_class_with_seat():
     # def getSeatInfo(self):
-    results = execute_SQL('remaining_seats', 'all')
-    results_dict = [
-        {
-            'name': t[0],
-            'male': t[1],
-            'female': t[2]
-        } for t in results
-    ]
-    print(results_dict)
-    return results_dict
-
+    # def is_seat_system_available(self):
+    return Course()
 
 @router.get('/{student_id}')
 def get_available_seats(student_id: str):
@@ -37,8 +29,6 @@ def get_available_seats(student_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
     return student if student.name != None else HTTPException(status_code=404, detail="查無此人")
-
-
 
 
 @router.post('/')

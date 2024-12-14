@@ -36,7 +36,7 @@ WHERE
             學號 = ?
             AND (欠費 <= 0 OR 金額 >= 3000)
     )
-    AND '2021-02-03 15:30:16.021' BETWEEN CAST([學生補位主檔].開始時間 AS datetime) 
+    AND '2021-02-03' BETWEEN CAST([學生補位主檔].開始時間 AS datetime) 
         AND CAST([學生補位主檔].結束時間 AS datetime)
     AND CONVERT(date, [學生補位主檔].日期) = '2024-08-22'
 

@@ -18,7 +18,7 @@ router = APIRouter(
 def get_employee_image(role: str, id: str):
     # def GetTodayEmployeePhotoByID(self, id):
     try:
-        image_bytes = execute_SQL(role + '_image', "one", id=id).照片
+        image_bytes = execute_SQL('picture/' + role + '_image', "one", id=id).照片
         return Response(content=image_bytes, media_type="image/png")
     except HTTPException as e:
         raise e

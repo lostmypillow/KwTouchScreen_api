@@ -1,11 +1,12 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 import time
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import video, seats, survey, classes, picture
-
+from typing import Optional
+active_websocket: Optional[WebSocket] = None
 
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
@@ -48,3 +49,25 @@ app.include_router(seats.router)
 app.include_router(survey.router)
 app.include_router(classes.router)
 app.include_router(picture.router)
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    global active_websocket
+    await websocket.accept()
+    active_websocket = websocket
+    print("client connected")
+    await websocket.send_json(
+        {
+            "device": "device.id",
+            "image": "teacher.id",
+            "teacher": "teacher.name",
+            "school": "teacher.school"
+        }
+    )
+    try:
+        while True:
+            message = await websocket.receive_text()
+    except WebSocketDisconnect:
+        active_websocket = None
+        print("Client disconnected")

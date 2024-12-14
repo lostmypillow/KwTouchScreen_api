@@ -3,23 +3,6 @@ from datetime import datetime, timedelta
 from .employee import Employee
 from fastapi import HTTPException
 
-def is_system_available():
-    # def is_seat_system_available(self):
-    return True if execute_SQL('seat_system_availability') else False
-
-
-def get_remaining_seats():
-    # def getSeatInfo(self):
-    results = execute_SQL('remaining_seats', 'all')
-    results_dict = [
-        {
-            'name': t[0],
-            'male': t[1],
-            'female': t[2]
-        } for t in results
-    ]
-    print(results_dict)
-
 
 class Student:
 
@@ -34,7 +17,7 @@ class Student:
     def _get_name_and_gender(self):
         # def getStudentName(self, id):
         details = execute_SQL(
-            'student_details',
+            'student/details',
             'one',
             card_id=self.student_id
         )
@@ -55,18 +38,18 @@ class Student:
         if self.student_id is not None:
 
             data = execute_SQL(
-                'get_classes',
+                'student/get_classes',
                 'all',
                 student_id=self.student_id
             )
             for item in data:
 
-                already_selected_today = True if execute_SQL('already_selected_today',
+                already_selected_today = True if execute_SQL('student/already_selected_today',
                                                              'one',
                                                              student_id=self.student_id,
                                                              class_id=item[3]
                                                              ) else False
-                sql_file = 'student_seats_male' if self.gender == 'male' else 'student_seats_female'
+                sql_file = 'student/seats_male' if self.gender == 'male' else 'student/seats_female'
                 available_seats = execute_SQL(sql_file,
                                               'all',
                                               class_id=item[3])
@@ -95,7 +78,7 @@ class Student:
 
     def register_seat(self, sn):
         # def add_class_seat_record(self, student_id, seat_id):
-        execute_SQL('register_seat',
+        execute_SQL('student/register_seat',
                     'commit',
                     student_id=self.student_id,
                     sn=sn
@@ -110,7 +93,7 @@ class Student:
         # monday = (today - timedelta(days=weekday)).strftime("%Y-%m-%d")
         monday = '2020-09-14 00:00:00.000'
         result = execute_SQL(
-            'voted_employees',
+            'student/voted_employees',
             'all',
             monday=monday,
             student_id=self.student_id
@@ -121,7 +104,7 @@ class Student:
         #  def isStudentUsedToday(self, studentId):
         date = datetime.now().strftime
         result = execute_SQL(
-            'is_student_used_today',
+            'student/is_student_used_today',
             'one',
             student_id=self.student_id, current_date=date,
             department_id=None if query_type == 'standard' else 9
@@ -132,7 +115,7 @@ class Student:
     def rate(self, employee: Employee, rating):
         #  def addSatisfication(self, studentId, employeeId, rank):
         execute_SQL(
-            'add_satisfaction',
+            'student/add_satisfaction',
             'commit',
             student_id=self.student_id,
             department=employee.dep_number,
