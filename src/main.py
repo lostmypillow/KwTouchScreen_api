@@ -4,7 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 import time
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import video, seats, survey, classes, picture
+from .routers import video, seats, survey, classes, picture, course, auth
 from typing import Optional
 active_websocket: Optional[WebSocket] = None
 
@@ -49,6 +49,8 @@ app.include_router(seats.router)
 app.include_router(survey.router)
 app.include_router(classes.router)
 app.include_router(picture.router)
+app.include_router(course.router)
+app.include_router(auth.router)
 
 
 @app.websocket("/ws")

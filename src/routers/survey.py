@@ -1,7 +1,8 @@
-from ..employee import Employee
-from ..student import Student
+from ..models.employee_model import Employee
+from ..models.student_model import Student
 from fastapi import HTTPException, APIRouter
 from pydantic import BaseModel
+
 
 class SurveyResult(BaseModel):
     employee_id: str
@@ -13,6 +14,7 @@ router = APIRouter(
     prefix="/survey",
     tags=["Survey"],
 )
+
 
 @router.get('/employees/{student_id}')
 def get_employees(student_id: str):
@@ -31,8 +33,8 @@ def get_employees(student_id: str):
 def send_survey(result: SurveyResult):
     try:
         print(result)
-        Student(result.student_id).rate(
-            Employee(result.employee_id), result.rating)
+        Student.rate(result.student_id,
+                     Employee(result.employee_id), result.rating)
 
     except HTTPException as e:
         raise e

@@ -29,10 +29,10 @@ def execute_SQL(command_name: str, mode: str, **kwargs):
             else:
                 raise ValueError(f"Invalid mode: {mode}. Must be 'one', 'all', or 'commit'.")
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=f"SQL file not found: {command_name}. Error: {e}")
+        print(e)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(e)
     except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        print(e)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+        print(e)
