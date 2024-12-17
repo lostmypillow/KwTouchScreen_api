@@ -1,53 +1,167 @@
-from fastapi import APIRouter, Response, File, UploadFile
-from typing import Annotated
-from smbclient import link, open_file, register_session, stat, listdir, mkdir, rmdir, scandir
+from fastapi import APIRouter, Response, UploadFile, HTTPException
+from typing import List
+from smbclient import register_session, open_file, scandir
+from pathlib import Path
 import logging
-from smbclient.path import isdir
+from pydantic import BaseModel
+from itertools import cycle
+from fastapi.responses import StreamingResponse
+import aiofiles
 router = APIRouter(
     prefix="/video",
     tags=["Video"],
 )
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
-@router.get('/')
-def get_video():
-    register_session("192.168.2.36", username="exam", password="exam")
 
-    smb_path = r"\\192.168.2.36\kwwebsite\kwad\vid2.mp4"
+# In-memory video queue
+video_queue = []
+video_queue_cycle = cycle(video_queue)
+
+# Define the video model for API responses
+
+
+class VideoItem(BaseModel):
+    id: int
+    title: str
+    url: str
+
+
+# Use pathlib to set the relative path for videos in the static directory
+# Get the base directory where the script is running
+base_dir = Path(__file__).resolve().parent
+static_dir = base_dir / "static" / "videos"  # Relative path to static/videos
+
+# Ensure the local videos directory exists
+static_dir.mkdir(parents=True, exist_ok=True)
+
+# SMB Credentials and Server Info
+SMB_SERVER = "192.168.2.36"
+SMB_USERNAME = "exam"
+SMB_PASSWORD = "exam"
+
+# SMB session registration
+
+
+def register_smb_session():
+    register_session(SMB_SERVER, username=SMB_USERNAME, password=SMB_PASSWORD)
+
+
+def check_smb():
+    global video_queue_cycle
     try:
-       with open_file(smb_path, mode="rb") as file:
-            # Read the content of the file into bytes
-            video_bytes = file.read()
-       return Response(
-            content=video_bytes,
-            media_type="video/mp4",  # Set the correct MIME type for your video file
-            headers={"Content-Disposition": f"attachment; filename={'meow.mp4'}"}
-        )
+        smb_dir = f"\\\\{SMB_SERVER}\\kwwebsite\\kwad"
+
+        smb_files = [{"name": entry.name, "path": entry.path}
+                     for entry in scandir(smb_dir) if entry.name.endswith('.mp4')]
+
+        files_not_in_local = [file for file in smb_files if not (
+            static_dir / file['name']).exists()]
+
+        for fi in files_not_in_local:
+
+            with open_file(fi['path'], mode="rb") as smb_file:
+                video_path = static_dir / fi['name']
+                with open(video_path, mode="wb") as local_file:
+                    local_file.write(smb_file.read())
+
+        print("files not in local resolved")
+        
+        files_in_local = [
+            file.name for file in static_dir.iterdir() if file.is_file()]
+        matches_not_found = []
+        
+        for item in files_in_local:
+            if not any(d.title == item for d in video_queue):
+                matches_not_found.append(item)
+
+        for item in matches_not_found:
+            video_item = VideoItem(
+                id=len(video_queue) + 1, title=item, url=f"/static/videos/{item}")
+            video_queue.append(video_item)
+            video_queue_cycle = cycle(video_queue)
+
     except Exception as e:
-        print(f"Error accessing SMB share: {e}")
-# @router.get('/dir')
-# def list_dir():
-#     register_session("192.168.2.36", username="exam", password="exam")
-#     
-    
+        print(e)
+        raise HTTPException(
+            status_code=500, detail="Failed to check SMB server")
+@router.get("/queue")
+async def get_video_queue():
+    register_smb_session()
+    check_smb()
+    return video_queue
 
+async def stream_video(video_path):
+    async with aiofiles.open(video_path, 'rb') as f:
+        while True:
+            chunk = await f.read(1024)
+            if not chunk:
+                break
+            yield chunk
 
-@router.post('/upload')
+# FastAPI route for streaming video
+@router.get("/play/{num}")
+async def stream_video_route(num: int):
+    if not video_queue:
+        raise HTTPException(status_code=404, detail="No videos in the queue")
+
+    # Get the next video item in the cycle
+    video_item = video_queue[num]
+    video_path = static_dir/ video_item.title
+
+    # Check if the video file exists
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Video file not found")
+
+    # Stream the video in chunks
+    return StreamingResponse(
+        stream_video(video_path),
+        media_type="video/mp4",
+        headers={"Content-Disposition": f"inline; filename={video_item.title}"}
+    )
+
+@router.post("/upload")
 async def upload_video(file: UploadFile):
-    register_session("192.168.2.36", username="exam", password="exam")
-    smb_path = r"\\192.168.2.36\kwwebsite\kwad\\" + file.filename
-    directory = []
+    # Register the SMB session
+    register_smb_session()
 
-    with open_file(smb_path, mode="wb") as fd:
-        fd.write(await file.read())
-    for file_info in scandir(r"\\192.168.2.36\kwwebsite\kwad"):
-        file_inode = file_info.inode()
-        if file_info.is_file():
-            directory.append({"name": file_info.name,"inode":file_inode})
-           
-        elif file_info.is_dir():
-            log.info("Dir: %s %d", file_info.name, file_inode)
-        else:
-            log.info("Symlink: %s %d", file_info.name, file_inode)
-    return directory
+    # Define the SMB path where the video will be uploaded
+    smb_path = f"\\\\{SMB_SERVER}\\kwwebsite\\kwad\\{file.filename}"
+
+    try:
+        # Save the uploaded file to the SMB share
+        with open_file(smb_path, mode="wb") as fd:
+            fd.write(await file.read())
+
+        # Save the video to the local static directory for streaming
+        local_video_path = static_dir / file.filename
+        with open(local_video_path, mode="wb") as local_file:
+            local_file.write(await file.read())
+
+        # Add video to the queue (you can customize the title and url here)
+        video_item = VideoItem(id=len(
+            video_queue) + 1, title=file.filename, url=f"/static/videos/{file.filename}")
+        video_queue.append(video_item)
+
+        # Recreate the cycle iterator whenever a video is added to the queue
+        global video_queue_cycle
+        video_queue_cycle = cycle(video_queue)
+
+        return {"message": f"Video {file.filename} uploaded and added to the queue", "video_queue": video_queue}
+    except Exception as e:
+        log.error(f"Error uploading video: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload video")
+
+
+# @router.get("/video/{video_name}")
+# async def serve_video(video_name: str):
+#     video_path = static_dir / video_name
+#     if video_path.exists():
+#         with open(video_path, mode="rb") as file:
+#             video_bytes = file.read()
+#         return Response(
+#             content=video_bytes,
+#             media_type="video/mp4",
+#             headers={"Content-Disposition": f"inline; filename={video_name}"}
+#         )
+#     else:
+#         raise HTTPException(status_code=404, detail="Video not found")

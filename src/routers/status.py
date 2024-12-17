@@ -2,12 +2,12 @@ from fastapi import APIRouter
 from ..database import execute_SQL
 
 router = APIRouter(
-    prefix="/classes",
-    tags=["Classes"],
+    prefix="/status",
+    tags=["Status"],
 )
 
 @router.get('/{period}')
-def get_classes(period: int):
+def get_today_classes(period: int):
     # date = datetime.now().strftime('%Y/%m/%d')
     date = '2023/08/15'
     result = execute_SQL(
