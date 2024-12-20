@@ -95,8 +95,6 @@ class Student:
         self.gender = None
         self.rateable_employees = []
         self._check_existence()
-        self._check_match_class(auth_data.course)
-        self._check_rateable_employees()
 
     def _check_existence(self):
         # def getStudentName(self, id):
@@ -120,20 +118,20 @@ class Student:
             print(e)
             raise HTTPException(status_code=500, detail="發生錯誤")
 
-    def _check_match_class(self, auth_course):
-        try:
-            data = execute_SQL(
+    def check_match_class(self, number, name):
+        data = execute_SQL(
                 'student/get_classes',
                 'all',
                 student_id=self.student_id
             )
-            if data[0][0] == auth_course:
-                self.auth_seat = True
-        except Exception as e:
-            print(e)
-            raise HTTPException(status_code=500, detail="發生錯誤")
+        check_select = execute_SQL('student/already_selected_today', 'all',
+                                       class_id=number, student_id=self.student_id)
+        if data[0][0] != name or check_select != []:
+                raise HTTPException(status_code=404, detail="目前沒有您可選的補位資料")
 
-    def _check_rateable_employees(self):
+
+
+    def check_rateable_employees(self):
         #  def GetVotedEmployeeByStudentIdWeekly(self, student_id):
         # today = datetime.now()
         today = datetime(2020, 9, 16).date()
@@ -162,7 +160,6 @@ class Student:
             } for data in employees_working_today if data[0].strip() not in voted_employees
         ]
 
-
     @staticmethod
     def register_seat(seat_data):
         # def add_class_seat_record(self, student_id, seat_id):
@@ -176,6 +173,7 @@ class Student:
         except Exception as e:
             print(e)
             raise HTTPException(status_code=500, detail="發生錯誤")
+
     @staticmethod
     def rate(student_id, employee: Employee, rating):
         #  def addSatisfication(self, studentId, employeeId, rank):

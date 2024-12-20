@@ -101,6 +101,8 @@ async def stream_video(video_path):
 # FastAPI route for streaming video
 @router.get("/play/{num}")
 async def stream_video_route(num: int):
+    register_smb_session()
+    check_smb()
     if not video_queue:
         raise HTTPException(status_code=404, detail="No videos in the queue")
 
