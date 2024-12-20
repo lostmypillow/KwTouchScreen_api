@@ -29,7 +29,7 @@ class VideoItem(BaseModel):
 # Use pathlib to set the relative path for videos in the static directory
 # Get the base directory where the script is running
 base_dir = Path(__file__).resolve().parent
-static_dir = base_dir / "static" / "videos"  # Relative path to static/videos
+static_dir = base_dir.parent / "static" / "videos"  # Relative path to static/videos
 
 # Ensure the local videos directory exists
 static_dir.mkdir(parents=True, exist_ok=True)
@@ -73,12 +73,14 @@ def check_smb():
         for item in files_in_local:
             if not any(d.title == item for d in video_queue):
                 matches_not_found.append(item)
+        print("1")
 
         for item in matches_not_found:
             video_item = VideoItem(
                 id=len(video_queue) + 1, title=item, url=f"/static/videos/{item}")
             video_queue.append(video_item)
             video_queue_cycle = cycle(video_queue)
+        print("2")
 
     except Exception as e:
         print(e)
@@ -103,16 +105,19 @@ async def stream_video(video_path):
 async def stream_video_route(num: int):
     register_smb_session()
     check_smb()
+    print("4")
     if not video_queue:
         raise HTTPException(status_code=404, detail="No videos in the queue")
 
     # Get the next video item in the cycle
     video_item = video_queue[num]
+    print("5")
     video_path = static_dir/ video_item.title
 
     # Check if the video file exists
     if not video_path.exists():
         raise HTTPException(status_code=404, detail="Video file not found")
+    print("6")
 
     # Stream the video in chunks
     return StreamingResponse(
