@@ -137,7 +137,7 @@ class Student:
         today = datetime(2020, 9, 16).date()
         weekday = today.weekday()
         # monday = (today - timedelta(days=weekday)).strftime("%Y-%m-%d")
-        monday = '2020-09-14 00:00:00.000'
+        monday = '2020-12-15 00:00:00.000'
         voted_employee_list = execute_SQL(
             'student/voted_employees',
             'all',

@@ -29,7 +29,7 @@ class VideoItem(BaseModel):
 # Use pathlib to set the relative path for videos in the static directory
 # Get the base directory where the script is running
 base_dir = Path(__file__).resolve().parent
-static_dir = base_dir.parent / "static" / "videos"  # Relative path to static/videos
+static_dir = base_dir.parent.parent / "static" / "videos"  # Relative path to static/videos
 
 # Ensure the local videos directory exists
 static_dir.mkdir(parents=True, exist_ok=True)

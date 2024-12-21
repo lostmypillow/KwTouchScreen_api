@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from .database import execute_SQL
 from datetime import datetime
 from .models.course_model import Course
+from fastapi.staticfiles import StaticFiles
 # List of clients (queues for SSE connections)
 clients: List[asyncio.Queue] = []
 
@@ -92,7 +93,7 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()  # Get the main event loop at the start
     scheduler = BackgroundScheduler()
     scheduler.add_job(get_today_classes, 'interval',
-                      seconds=5)
+                      seconds=600)
     scheduler.add_job(get_today_classes, 'cron',
                       hour=12, minute=1)
     scheduler.add_job(get_today_classes, 'cron',
@@ -100,14 +101,16 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(get_today_classes, 'cron',
                       hour=0, minute=1)
     scheduler.add_job(get_class_with_seat, 'interval',
-                      seconds=10)
+                      seconds=300)
+    scheduler.add_job(get_class_with_seat, 'interval',
+                      seconds=3)
     scheduler.start()
     yield
 
 
 # Initialize FastAPI app with lifespan (context manager)
 app = FastAPI(lifespan=lifespan)
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # Add CORS middleware to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
