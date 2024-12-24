@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app with lifespan (context manager)
 app = FastAPI(lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Add CORS middleware to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
@@ -119,7 +119,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Middleware to measure request processing time
 # @app.middleware("http")

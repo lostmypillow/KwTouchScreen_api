@@ -19,18 +19,6 @@ class SeatModel(BaseModel):
     sn: int
 
 
-
-# @router.get('/{student_id}')
-# def get_available_seats(student_id: str):
-#     try:
-#         student = Student(student_id)
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         print(e)
-#     return student
-
-
 @router.post('/')
 async def register_seat(seat_info: SeatModel):
     try:
