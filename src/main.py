@@ -67,12 +67,7 @@ def get_today_classes():
         if extracted_hour > current_hour:
             event_message.append(TodayClass(
                 location=result[0], name=result[1], time=result[2], other=result[3]).model_dump())
-            asyncio.run_coroutine_threadsafe(send_event_to_clients(
-                {
-                    "type": "today",
-                    "data": event_message
-                }
-            ), loop)
+    return {"type": "today", "data": event_message}
     # [(2, '微積分B班(13)共補', '09:00', 1), (3, '微積分C班共補(8)', '09:00', 1)]
 
 
@@ -80,34 +75,31 @@ def get_class_with_seat():
     # def getSeatInfo(self):
     # def is_seat_system_available(self):
     course = Course()
-    asyncio.run_coroutine_threadsafe(send_event_to_clients(
-        {
+    return  {
             "type": "remaining",
             "data": course.model_dump()
         }
-    ), loop)
-    return course if course.is_available else {}
+event_data = {"type": None, "data": None}
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global loop
-    loop = asyncio.get_event_loop()  # Get the main event loop at the start
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(get_today_classes, 'interval',
-                      seconds=600)
-    scheduler.add_job(get_today_classes, 'cron',
-                      hour=12, minute=1)
-    scheduler.add_job(get_today_classes, 'cron',
-                      hour=18, minute=1)
-    scheduler.add_job(get_today_classes, 'cron',
-                      hour=0, minute=1)
-    scheduler.add_job(get_class_with_seat, 'interval',
-                      seconds=300)
-    scheduler.add_job(get_class_with_seat, 'interval',
-                      seconds=3)
-    scheduler.start()
-    yield
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     global loop
+#     loop = asyncio.get_event_loop()  # Get the main event loop at the start
+#     scheduler = BackgroundScheduler()
+#     scheduler.add_job(get_today_classes, 'interval',
+#                       seconds=600)
+#     scheduler.add_job(get_today_classes, 'cron',
+#                       hour=12, minute=1)
+#     scheduler.add_job(get_today_classes, 'cron',
+#                       hour=18, minute=1)
+#     scheduler.add_job(get_today_classes, 'cron',
+#                       hour=0, minute=1)
+#     scheduler.add_job(get_class_with_seat, 'interval',
+#                       seconds=300)
+#     scheduler.add_job(get_class_with_seat, 'interval',
+#                       seconds=3)
+#     scheduler.start()
+#     yield
 
 
 # Initialize FastAPI app with lifespan (context manager)
@@ -123,7 +115,7 @@ middleware = [
         allow_headers=['*']
     )
 ]
-app = FastAPI(lifespan=lifespan,middleware=middleware)
+app = FastAPI(middleware=middleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Middleware to measure request processing time
@@ -142,22 +134,14 @@ async def sse_endpoint():
     get_class_with_seat()  # Trigger get_class_with_seat
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
+@app.get('/eventpoll/{type}')
+async def event_poll(type: int):
+    if type == 0:
+        return get_class_with_seat()
+    else:
+        return get_today_classes()
+    
 
-# APScheduler job function that triggers events
-
-
-@app.post("/trigger_event")
-async def trigger_event():
-    """Trigger an event manually."""
-    event_message = {
-        "to": "client",
-        "event": "Manual event triggered",
-        "timestamp": time.ctime()
-    }
-
-    # Send the manual event to all connected clients
-    asyncio.create_task(send_event_to_clients(event_message))
-    return {"message": "Event triggered successfully!"}
 
 
 app.include_router(video.router)
@@ -165,24 +149,3 @@ app.include_router(seats.router)
 app.include_router(survey.router)
 app.include_router(picture.router)
 app.include_router(auth.router)
-
-# @app.websocket("/ws")
-# async def websocket_endpoint(websocket: WebSocket):
-#     global active_websocket
-#     await websocket.accept()
-#     active_websocket = websocket
-#     print("client connected")
-#     await websocket.send_json(
-#         {
-#             "device": "device.id",
-#             "image": "teacher.id",
-#             "teacher": "teacher.name",
-#             "school": "teacher.school"
-#         }
-#     )
-#     try:
-#         while True:
-#             message = await websocket.receive_text()
-#     except WebSocketDisconnect:
-#         active_websocket = None
-#         print("Client disconnected")
