@@ -4,7 +4,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 import time
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from .event_manager import send_event_to_clients, event_stream
 import asyncio
@@ -13,6 +14,7 @@ import json
 from pydantic import BaseModel, Field
 from .database import execute_SQL
 from datetime import datetime
+
 from .models.course_model import Course
 from fastapi.staticfiles import StaticFiles
 # List of clients (queues for SSE connections)
@@ -109,16 +111,19 @@ async def lifespan(app: FastAPI):
 
 
 # Initialize FastAPI app with lifespan (context manager)
-app = FastAPI(lifespan=lifespan)
+
 
 # Add CORS middleware to allow frontend communication
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=['*'],
+        allow_credentials=True,
+        allow_methods=['*'],
+        allow_headers=['*']
+    )
+]
+app = FastAPI(lifespan=lifespan,middleware=middleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Middleware to measure request processing time
