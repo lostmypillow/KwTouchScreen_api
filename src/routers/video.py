@@ -5,7 +5,7 @@ from pathlib import Path
 import logging
 from pydantic import BaseModel
 from itertools import cycle
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse
 import aiofiles
 router = APIRouter(
     prefix="/video",
@@ -117,13 +117,18 @@ async def stream_video_route(num: int):
     if not video_path.exists():
         raise HTTPException(status_code=404, detail="Video file not found")
     print("6")
-
-    # Stream the video in chunks
-    return StreamingResponse(
-        stream_video(video_path),
+    return FileResponse(
+        path=video_path,
         media_type="video/mp4",
         headers={"Content-Disposition": f"inline; filename={video_item.title}"}
     )
+
+    # Stream the video in chunks
+    # return StreamingResponse(
+    #     stream_video(video_path),
+    #     media_type="video/mp4",
+    #     headers={"Content-Disposition": f"inline; filename={video_item.title}"}
+    # )
 
 @router.post("/upload")
 async def upload_video(file: UploadFile):
