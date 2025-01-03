@@ -116,7 +116,6 @@ middleware = [
     )
 ]
 app = FastAPI(middleware=middleware)
-app.mount("/", StaticFiles(directory="public"), name="public")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Middleware to measure request processing time

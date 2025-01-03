@@ -1,1 +1,0 @@
-# KwTouchAd_api
