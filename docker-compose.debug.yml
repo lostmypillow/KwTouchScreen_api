@@ -1,8 +1,8 @@
 version: '3.4'
 
 services:
-  kwtouchadapi:
-    image: kwtouchadapi
+  kwtouchscreen:
+    image: kwtouchscreen
     build:
       context: .
       dockerfile: ./Dockerfile

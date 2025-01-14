@@ -4,16 +4,6 @@ from .employee_model import Employee
 from fastapi import HTTPException
 
 
-def dep_name_from_num(target_value):
-    deps = {
-        "招生部": 2,
-        "櫃台": 4,
-        "補課教室": 8,
-        "數輔": 9,
-        "導師組": 11
-    }
-
-    return next((k for k, v in deps.items() if v == target_value), None)
 
 
 class Student:
@@ -189,14 +179,3 @@ class Student:
         except Exception as e:
             print(e)
             raise HTTPException(status_code=500, detail="發生錯誤")
-
-        # def sent_survey_today(self, query_type: str = 'standard'):
-    #     #  def isStudentUsedToday(self, studentId):
-    #     date = datetime.now().strftime
-    #     result = execute_SQL(
-    #         'student/is_student_used_today',
-    #         'one',
-    #         student_id=self.student_id, current_date=date,
-    #         department_id=None if query_type == 'standard' else 9
-    #     )
-    #     return True if result else None

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from itertools import cycle
 from fastapi.responses import FileResponse
 import aiofiles
+import os
 router = APIRouter(
     prefix="/video",
     tags=["Video"],
@@ -34,11 +35,9 @@ static_dir = base_dir.parent.parent.parent / "static" / "videos"  # Relative pat
 static_dir.mkdir(parents=True, exist_ok=True)
 
 # SMB Credentials and Server Info
-SMB_SERVER = "192.168.2.36"
-SMB_USERNAME = "exam"
-SMB_PASSWORD = "exam"
-
-# SMB session registration
+SMB_SERVER = os.getenv('SMB_SERVER')
+SMB_USERNAME = os.getenv('SMB_USERNAME')
+SMB_PASSWORD = os.getenv('SMB_PASSWORD')
 
 
 def register_smb_session():
@@ -159,20 +158,5 @@ async def upload_video(file: UploadFile):
 
         return {"message": f"Video {file.filename} uploaded and added to the queue", "video_queue": video_queue}
     except Exception as e:
-        log.error(f"Error uploading video: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload video")
 
-
-# @router.get("/video/{video_name}")
-# async def serve_video(video_name: str):
-#     video_path = static_dir / video_name
-#     if video_path.exists():
-#         with open(video_path, mode="rb") as file:
-#             video_bytes = file.read()
-#         return Response(
-#             content=video_bytes,
-#             media_type="video/mp4",
-#             headers={"Content-Disposition": f"inline; filename={video_name}"}
-#         )
-#     else:
-#         raise HTTPException(status_code=404, detail="Video not found")

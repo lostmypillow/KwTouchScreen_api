@@ -7,6 +7,6 @@ VALUES
         CONVERT(char, getdate(), 112),
         CONVERT(char, getdate(), 120),
         :employee_id,
-        :rank,
+        :rating,
         'kwad'
     );

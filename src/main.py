@@ -1,111 +1,14 @@
-from apscheduler.schedulers.background import BackgroundScheduler
-from contextlib import asynccontextmanager
-from apscheduler.triggers.interval import IntervalTrigger
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
-import time
+from fastapi import FastAPI, HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from typing import List, Optional
-from .event_manager import send_event_to_clients, event_stream
-import asyncio
-from .routers import video, seats, survey, picture, auth
-import json
-from pydantic import BaseModel, Field
-from .database import execute_SQL
-from datetime import datetime
-
-from .models.course_model import Course
+from .routers import video, survey, picture, auth
+from lib.get_today_class import get_today_classes
+from lib.get_class_with_seat import get_class_with_seat
 from fastapi.staticfiles import StaticFiles
-# List of clients (queues for SSE connections)
-clients: List[asyncio.Queue] = []
+from pydantic import BaseModel
+from database.operations import commit_sql
+from lib.auth_operations import register_seat
 
-# Hold the reference to the main event loop
-loop: asyncio.AbstractEventLoop = None
-
-
-class TodayClass(BaseModel):
-    location: str
-    name: str
-    time: str
-    other: int
-
-
-def get_today_classes():
-    # date = datetime.now().strftime('%Y/%m/%d')
-    date = '2023/08/15'
-
-    # current_hour = datetime.now().hour
-    # if current_hour >= 12 and current_hour <= 17:
-    #     period = 2
-    # elif current_hour <= 11:
-    #     period = 1
-    # else:
-    #     period = 3
-    current_hour = 8
-    period = 1
-
-    results = execute_SQL(
-        'scheduled_classes',
-        'all',
-        current_date=date, current_period=period
-    )
-    classroom_map = [
-        "301教室",
-        "302教室",
-        "303教室",
-        "305教室",
-        "會議室"
-    ]
-
-    event_message = []
-    for result in results:
-        result = list(result)  # Convert Row to a list (mutable)
-        result[0] = classroom_map[result[0] - 1]  # Modify the classroom
-
-        extracted_hour = datetime.strptime(result[2], "%H:%M").hour
-        if extracted_hour > current_hour:
-            event_message.append(TodayClass(
-                location=result[0], name=result[1], time=result[2], other=result[3]).model_dump())
-    return {"type": "today", "data": event_message}
-    # [(2, '微積分B班(13)共補', '09:00', 1), (3, '微積分C班共補(8)', '09:00', 1)]
-
-
-def get_class_with_seat():
-    # def getSeatInfo(self):
-    # def is_seat_system_available(self):
-    course = Course()
-    return  {
-            "type": "remaining",
-            "data": course.model_dump()
-        }
-event_data = {"type": None, "data": None}
-
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     global loop
-#     loop = asyncio.get_event_loop()  # Get the main event loop at the start
-#     scheduler = BackgroundScheduler()
-#     scheduler.add_job(get_today_classes, 'interval',
-#                       seconds=600)
-#     scheduler.add_job(get_today_classes, 'cron',
-#                       hour=12, minute=1)
-#     scheduler.add_job(get_today_classes, 'cron',
-#                       hour=18, minute=1)
-#     scheduler.add_job(get_today_classes, 'cron',
-#                       hour=0, minute=1)
-#     scheduler.add_job(get_class_with_seat, 'interval',
-#                       seconds=300)
-#     scheduler.add_job(get_class_with_seat, 'interval',
-#                       seconds=3)
-#     scheduler.start()
-#     yield
-
-
-# Initialize FastAPI app with lifespan (context manager)
-
-
-# Add CORS middleware to allow frontend communication
 middleware = [
     Middleware(
         CORSMiddleware,
@@ -118,21 +21,6 @@ middleware = [
 app = FastAPI(middleware=middleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Middleware to measure request processing time
-# @app.middleware("http")
-# async def add_process_time_header(request: Request, call_next):
-#     start_time = time.time()
-#     response = await call_next(request)
-#     print(f"Request took {time.time() - start_time} sec")
-#     return response
-
-
-@app.get("/events")
-async def sse_endpoint():
-    """Endpoint for the client to connect via SSE."""
-    get_today_classes() # Trigger get_today_classes
-    get_class_with_seat()  # Trigger get_class_with_seat
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @app.get('/eventpoll/{type}')
 async def event_poll(type: int):
@@ -140,12 +28,61 @@ async def event_poll(type: int):
         return get_class_with_seat()
     else:
         return get_today_classes()
-    
 
+
+class SeatInfo(BaseModel):
+    student_id: str
+    sn: int
+
+
+@app.post('/seats')
+def register_seat(seat_info: SeatInfo):
+    """_summary_
+
+    Parameters
+    ----------
+    seat_info : SeatInfo
+        _description_
+
+    Raises
+    ------
+    HTTPException
+        _description_
+    """
+    try:
+        commit_sql(
+            'student/register_seat',
+            student_id=seat_info.student_id,
+            sn=seat_info.sn
+        )
+    except Exception as e:
+        print(e)
+        raise HTTPException(404, '發生錯誤')
+
+
+class SurveyInfo(BaseModel):
+    employee_id: str
+    student_id: str
+    rating: int
+    dep_number: int
+
+
+@app.post('/rate')
+def rate_employee(survey_info: SurveyInfo):
+    try:
+        commit_sql(
+            'rate_employee',
+            student_id=survey_info.student_id,
+            department=survey_info.dep_number,
+            employee_id=survey_info.employee_id,
+            rank=survey_info.rating
+        )
+    except Exception as e:
+        print(e)
+        raise HTTPException(404, '發生錯誤')
 
 
 app.include_router(video.router)
-app.include_router(seats.router)
 app.include_router(survey.router)
 app.include_router(picture.router)
 app.include_router(auth.router)
