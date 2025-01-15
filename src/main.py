@@ -1,38 +1,50 @@
 from fastapi import FastAPI, HTTPException
-from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from .routers import video, survey, picture, auth
 from lib.get_today_class import get_today_classes
 from lib.get_class_with_seat import get_class_with_seat
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from database.operations import commit_sql
+from database.operations import commit_sql, fetch_one_sql
+from lib.get_dep_number import get_dep_number
 from lib.auth_operations import register_seat
-
-middleware = [
-    Middleware(
-        CORSMiddleware,
-        allow_origins=['http://localhost', 'http://localhost:5173'],
-        allow_credentials=True,
-        allow_methods=['*'],
-        allow_headers=['*']
-    )
-]
-app = FastAPI(middleware=middleware)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-@app.get('/eventpoll/{type}')
-async def event_poll(type: int):
-    if type == 0:
-        return get_class_with_seat()
-    else:
-        return get_today_classes()
 
 
 class SeatInfo(BaseModel):
     student_id: str
     sn: int
+
+
+class SurveyInfo(BaseModel):
+    employee_id: str
+    student_id: str
+    rating: int
+    dep_number: int
+
+
+origins = ["*",]
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get('/classes/{type}')
+async def event_poll(type: str):
+    classes_today = get_today_classes()
+    class_with_seat = get_class_with_seat()
+    if type == 0 and class_with_seat:
+        return class_with_seat
+    elif type == 1 and classes_today:
+        return classes_today
+    else:
+        raise HTTPException
 
 
 @app.post('/seats')
@@ -60,20 +72,13 @@ def register_seat(seat_info: SeatInfo):
         raise HTTPException(404, '發生錯誤')
 
 
-class SurveyInfo(BaseModel):
-    employee_id: str
-    student_id: str
-    rating: int
-    dep_number: int
-
-
 @app.post('/rate')
 def rate_employee(survey_info: SurveyInfo):
     try:
         commit_sql(
             'rate_employee',
             student_id=survey_info.student_id,
-            department=survey_info.dep_number,
+            department=get_dep_number(survey_info.employee_id),
             employee_id=survey_info.employee_id,
             rank=survey_info.rating
         )
