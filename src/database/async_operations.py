@@ -1,20 +1,22 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import text
 import pathlib
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-connection_url = f"mssql+pyodbc://{os.getenv('DB_USERNAME')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_URL')}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+from .async_session import async_session
 
 
-async_engine = create_async_engine(
-    connection_url, pool_size=100, max_overflow=0, pool_pre_ping=False)
-async_session = async_sessionmaker(async_engine, expire_on_commit=False)
+async def sql_from_file(command_name: str):
+    """_summary_
 
+    Parameters
+    ----------
+    command_name : str
+        _description_
 
-async def sql_from_file(command_name):
+    Returns
+    -------
+    _type_
+        _description_
+    """
     file_path = os.path.join(pathlib.Path(
         __file__).parent.resolve(), 'sql', command_name + '.sql')
     with open(file_path, 'r', encoding="utf-8") as file_buffer:
@@ -32,11 +34,14 @@ async def fetch_one_sql(command_name, **kwargs):
     async with async_session() as session:
         sql_command = await sql_from_file(command_name)
         result = await session.execute(text(sql_command), kwargs)
-        return result.fetchone()
+        one_result = result.fetchone()
+        return one_result
 
 
 async def fetch_all_sql(command_name, **kwargs):
     async with async_session() as session:
         sql_command = await sql_from_file(command_name)
         result = await session.execute(text(sql_command), kwargs)
-        return result.fetchall()
+        all_results = result.fetchall()
+        return all_results
+

@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import video, survey, picture, auth
+from fastapi.responses import StreamingResponse
+from routers import video, picture, auth
 from lib.get_today_class import get_today_classes
 from lib.get_class_with_seat import get_class_with_seat
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from database.operations import commit_sql, fetch_one_sql
 from lib.get_dep_number import get_dep_number
-from lib.auth_operations import register_seat
 
 
 class SeatInfo(BaseModel):
@@ -35,19 +35,28 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get('/classes/{type}')
-async def event_poll(type: str):
-    classes_today = get_today_classes()
-    class_with_seat = get_class_with_seat()
-    if type == 0 and class_with_seat:
-        return class_with_seat
-    elif type == 1 and classes_today:
-        return classes_today
-    else:
-        raise HTTPException
+# @app.get('/classes/{type}')
+# async def event_poll(type: str):
+#     classes_today = get_today_classes()
+#     class_with_seat = get_class_with_seat()
+#     if type == 0 and class_with_seat:
+#         return class_with_seat
+#     elif type == 1 and classes_today:
+#         return classes_today
+#     else:
+#         raise HTTPException
 
 
-@app.post('/seats')
+@app.get('/today_class')
+async def stream_today_class():
+    # return StreamingResponse()
+    return get_today_classes()
+
+@app.get('/class_with_seat')
+async def stream_class_with_seat():
+    return StreamingResponse(get_class_with_seat())
+
+@app.post('/seat')
 def register_seat(seat_info: SeatInfo):
     """_summary_
 
@@ -86,8 +95,15 @@ def rate_employee(survey_info: SurveyInfo):
         print(e)
         raise HTTPException(404, '發生錯誤')
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_json()
+        print(data)
+        await websocket.send_text(f"Message text was: {data}")
+
 
 app.include_router(video.router)
-app.include_router(survey.router)
 app.include_router(picture.router)
 app.include_router(auth.router)

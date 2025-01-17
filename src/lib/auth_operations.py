@@ -75,9 +75,3 @@ def check_rateable_employees(student_id: str):
         } for data in employees_working_today if data[0].strip() not in voted_employees
     ]
     return rateable_employees if rateable_employees is not [] else None
-
-
-
-def rate_employee(student_id, employee: Employee, rating):
-        #  def addSatisfication(self, studentId, employeeId, rank):
-        
