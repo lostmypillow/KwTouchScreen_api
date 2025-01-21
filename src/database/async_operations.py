@@ -91,9 +91,8 @@ async def exec_sql(
 
             # Return the result as dictionary if result isn't None
             # Otherwise, just return None
-            return one_result._mapping if one_result is not None else one_result
+            return dict(one_result._mapping) if one_result is not None else one_result
         
         elif mode == "all":
-
             # Returns the results as a list of dicts, or an empty list
-            return result.mappings().all()
+            return [dict(row._mapping) for row in result.fetchall()]

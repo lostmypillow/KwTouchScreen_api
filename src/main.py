@@ -1,9 +1,7 @@
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from routers import video, picture, auth
-from lib.get_today_class import get_today_classes
-from lib.get_class_with_seat import get_class_with_seat
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from database.operations import commit_sql, fetch_one_sql
@@ -11,7 +9,10 @@ from lib.get_dep_number import get_dep_number
 from database.async_operations import async_engine, exec_sql
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from typing import Any, Union
 import asyncio
+
+
 class SeatInfo(BaseModel):
     student_id: str
     sn: int
@@ -24,40 +25,72 @@ class SurveyInfo(BaseModel):
     dep_number: int
 
 
-origins = ["*",]
 
-class KlasseResponse(BaseModel):
-    """_summary_
+async def send_updates():
 
-    Attributes
-    ----------
-    classes_today : list[dict]
-        _description_
-    """
-    classes_today: list[dict]
-    """meow
-    """
-    klasse_with_seats: list
-    # klasse is class in German, to avoid confusing it with class
+    # current_date = datetime.now().strftime('%Y/%m/%d')
+    # current_hour = datetime.now().hour
+    # match current_hour:
+    #     case h if 12 <= h <= 17:
+    #         current_period = 2
+    #     case h if h <= 11:
+    #         current_period = 1
+    #     case _:
+    #         current_period = 3
 
+    current_date = '2023/08/15'  # DEBUG USE
+    current_period = 1  # DEBUG USE
 
-async def send_updates() -> KlasseResponse:
+    classes_today: list[dict[str, Any]] = await exec_sql(
+        'all',
+        'classes_today',
+        current_date=current_date,
+        current_period=current_period
+    )
+
+    # '位子'
+    class_with_seats: dict[str, Union[str, list[str]]] = await exec_sql('one', 'single_get_remaining')
+
+    # convert 位子, which is a string with a lot of commas, into a list
+    # SQ.座位號,
+    # SQ.座位
+    class_with_seats['座位'] = [
+        {"座位": seat, "號碼": seat_num}
+        for seat, seat_num in zip(
+            class_with_seats['座位'].split(','),
+            class_with_seats['座位號'].split(',')
+        )
+    ]
+
+    del class_with_seats['座位號']
+
+    data = {
+        "classes_today": classes_today,
+        "class_with_seats": class_with_seats
+    }
+
     if 'client' in active_connections:
         await active_connections['client'].send_json(data)
+
+    print(data)
     print("meow")
+
 
 async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler()
     scheduler.start()
-    scheduler.add_job(
-        send_updates,
-        "interval",
-        seconds=10
+    # scheduler.add_job(
+    #     send_updates,
+    #     "interval",
+    #     seconds=5
 
-    )
+    # )
     yield
-    await async_engine.dispose()
-    scheduler.shutdown()
+    if async_engine:
+        await async_engine.dispose()
+
+    if scheduler:
+        scheduler.shutdown()
 
 
 app = FastAPI(
@@ -74,7 +107,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*",],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,26 +117,6 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# @app.get('/classes/{type}')
-# async def event_poll(type: str):
-#     classes_today = get_today_classes()
-#     class_with_seat = get_class_with_seat()
-#     if type == 0 and class_with_seat:
-#         return class_with_seat
-#     elif type == 1 and classes_today:
-#         return classes_today
-#     else:
-#         raise HTTPException
-
-
-# @app.get('/today_class')
-# async def stream_today_class():
-#     # return StreamingResponse()
-#     return get_today_classes()
-
-# @app.get('/class_with_seat')
-# async def stream_class_with_seat():
-#     return StreamingResponse(get_class_with_seat())
 
 # @app.post('/seat')
 # def register_seat(seat_info: SeatInfo):
@@ -145,19 +158,27 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 #         raise HTTPException(404, '發生錯誤')
 
 # Store connected clients
-active_connections: dict [str, WebSocket]= {}
+active_connections: dict[str, WebSocket] = {}
+
+
 @app.websocket("/ws/{client_name}")
 async def websocket_endpoint(websocket: WebSocket, client_name: str):
     await websocket.accept()
     active_connections[client_name] = websocket
 
-    while True:
-        data: dict = await websocket.receive_json()
-        if "to" in data:
-            recipient = data['to']
-            if recipient in active_connections:
-                await active_connections[recipient].send_json(data)
-            
+    try:
+        while True:
+            data: dict = await websocket.receive_json()
+            if "to" in data:
+                recipient = data['to']
+                if recipient in active_connections:
+                    await active_connections[recipient].send_json(data)
+    except WebSocketDisconnect:
+        print(f"Client {client_name} disconnected.")
+    finally:
+        # Ensure the connection is removed from the active connections
+        active_connections.pop(client_name, None)
+        print(f"Removed {client_name} from active connections.")
 
         # x= {
         #     "to": "control",
@@ -168,19 +189,39 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str):
         #     "action": "send",
         #     "data": "meow"
         # }
-        
 
 
 # app.include_router(video.router)
 # app.include_router(picture.router)
-# app.include_router(auth.router)
-
-@app.get('/testt')
-async def welp() -> KlasseResponse:
-    return KlasseResponse(classes_today=[], klasse_with_seats=[])
+app.include_router(auth.router)
 
 @app.get('/test')
 async def test():
-    x = await exec_sql('all', 'scheduled_classes',  current_date='2023/08/15', current_period=1)
-    print(x)
-    return x
+    deps = {
+        "招生部": 2,
+        "櫃台": 4,
+        "補課教室": 8,
+        "數輔": 9,
+        "導師組": 11
+    }
+
+    emp_working_today = await exec_sql(
+        'all',
+        'student_today_employees',
+        current_date='2020-09-16'
+    )
+    for employee in emp_working_today:
+        if "學號" in employee:
+            employee['學號'] = employee['學號'].strip()
+        # 
+        if '主要部門' in employee:
+            employee['主要部門'] = next((k for k, v in deps.items() if v == employee['主要部門']), None)
+
+    voted_emp_week = await exec_sql(
+        'all',
+        'student_voted_employees',
+        monday='2020-12-15 00:00:00.000',
+        student_id='300003'
+    )
+    
+    return [y for y in emp_working_today if y['學號'] not in {x['評分對象'] for x in voted_emp_week}]

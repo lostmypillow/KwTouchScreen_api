@@ -37,16 +37,8 @@ def check_already_selected(class_id, student_id: str):
     return True if already_selected != [] else False
 
 
-def dep_name_from_num(target_value):
-    deps = {
-        "招生部": 2,
-        "櫃台": 4,
-        "補課教室": 8,
-        "數輔": 9,
-        "導師組": 11
-    }
-
-    return next((k for k, v in deps.items() if v == target_value), None)
+# def dep_name_from_num(target_value):
+    
 
 
 def check_rateable_employees(student_id: str):
