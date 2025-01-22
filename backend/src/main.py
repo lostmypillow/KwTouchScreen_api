@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from routers import video, picture, auth
+from routers.video import smb_session
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from database.operations import commit_sql, fetch_one_sql
@@ -23,7 +24,6 @@ class SurveyInfo(BaseModel):
     student_id: str
     rating: int
     dep_number: int
-
 
 
 async def send_updates():
@@ -76,6 +76,16 @@ async def send_updates():
     print("meow")
 
 
+async def send_heartbeat():
+    if 'control' in active_connections:
+        await active_connections['control'].send_json(
+            {
+                "to": "control",
+                "from": "server",
+                "action": "heartbeat"
+            })
+
+
 async def lifespan(app: FastAPI):
     scheduler = AsyncIOScheduler()
     scheduler.start()
@@ -85,12 +95,17 @@ async def lifespan(app: FastAPI):
     #     seconds=5
 
     # )
+
+  
     yield
     if async_engine:
         await async_engine.dispose()
 
     if scheduler:
         scheduler.shutdown()
+
+    if smb_session:
+        smb_session.disconnect()
 
 
 app = FastAPI(
@@ -115,7 +130,6 @@ app.add_middleware(
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 
 
 # @app.post('/seat')
@@ -191,9 +205,10 @@ async def websocket_endpoint(websocket: WebSocket, client_name: str):
         # }
 
 
-# app.include_router(video.router)
+app.include_router(video.router)
 # app.include_router(picture.router)
 app.include_router(auth.router)
+
 
 @app.get('/test')
 async def test():
@@ -213,9 +228,10 @@ async def test():
     for employee in emp_working_today:
         if "學號" in employee:
             employee['學號'] = employee['學號'].strip()
-        # 
+        #
         if '主要部門' in employee:
-            employee['主要部門'] = next((k for k, v in deps.items() if v == employee['主要部門']), None)
+            employee['主要部門'] = next(
+                (k for k, v in deps.items() if v == employee['主要部門']), None)
 
     voted_emp_week = await exec_sql(
         'all',
@@ -223,5 +239,5 @@ async def test():
         monday='2020-12-15 00:00:00.000',
         student_id='300003'
     )
-    
+
     return [y for y in emp_working_today if y['學號'] not in {x['評分對象'] for x in voted_emp_week}]
