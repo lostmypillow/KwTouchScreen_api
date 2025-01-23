@@ -16,11 +16,13 @@ function App() {
   const [serverConnection, setServerConnection] = useState(false);
   const [clientConnection, setClientConnection] = useState(false);
   const [ws, setWs] = useState(null); // Store the WebSocket object
-  const [wsRefresh, setWsRefresh] = useState(false)
+  const [wsRefresh, setWsRefresh] = useState(false);
+  const [videoList, setVideoList] = useState([]);
+  const [videoStatus, setVideoStatus] = useState("");
 
   // Function to initialize WebSocket
   const initializeWebSocket = () => {
-    setWsRefresh(true)
+    setWsRefresh(true);
     const ws = new WebSocket("ws://localhost:8000/ws/control");
 
     // On WebSocket open, set connection state to true
@@ -31,7 +33,18 @@ function App() {
 
     // On WebSocket message, update server connection state
     ws.onmessage = (event) => {
-      console.log("Message received: ", event.data);
+      const message = JSON.parse(event.data);
+      if (message.action == "update queue") {
+        setVideoList(message.data);
+      } else if (message.action == "update player") {
+        setVideoStatus(message.data);
+      } else if (message.from == "client" && message.action == "heartbeat") {
+        setClientConnection(true);
+      } else {
+        console.log(message);
+      }
+      console.log("Message received");
+
       // You can update the state based on the received message if necessary
     };
 
@@ -49,7 +62,7 @@ function App() {
 
     // Set the WebSocket object in state
     setWs(ws);
-    setWsRefresh(false)
+    setWsRefresh(false);
   };
 
   // Initialize WebSocket on component mount
@@ -67,7 +80,6 @@ function App() {
 
   // Handle button press to refresh the WebSocket connection
   const handleReconnect = () => {
-    
     if (ws) {
       console.log("Closing existing WebSocket connection...");
       ws.close(); // Close the existing WebSocket
@@ -94,11 +106,12 @@ function App() {
       </AppBar>
 
       <div className="flex flex-col items-start justify-start gap-4 p-8">
-        <div className="flex flex-row items-center justify-between w-full">
-          <h2 className="text-2xl">Server: {serverConnection ? "Connected" : "Disconnected"}</h2>
-
+        <div className="flex flex-row items-center justify-start gap-4 w-full">
+          <h2 className="text-2xl">
+            Server: {serverConnection ? "Connected" : "Disconnected"}
+          </h2>
           <Button
-          loading={wsRefresh}
+            loading={wsRefresh}
             variant="contained"
             startIcon={<RefreshIcon />}
             onClick={handleReconnect}
@@ -106,7 +119,16 @@ function App() {
             Refresh
           </Button>
         </div>
-        <VideoManager />
+        <h2 className="text-2xl">
+          Touchscreen: {clientConnection ? "Connected" : "Disconnected"}
+        </h2>
+        <p>
+          Video Player Status: {videoStatus == "" ? "Offline" : videoStatus}
+        </p>
+        <VideoManager
+          videoList={videoList}
+          serverConnection={serverConnection}
+        />
       </div>
     </>
   );

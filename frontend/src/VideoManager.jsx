@@ -10,7 +10,8 @@ import { ListItem } from "@mui/material";
 import { useState, useEffect } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import axios from "axios";
-export function VideoManager() {
+import DeleteIcon from '@mui/icons-material/Delete';
+export function VideoManager({ videoList, serverConnection }) {
   const VisuallyHiddenInput = styled("input")({
     clip: "rect(0 0 0 0)",
     clipPath: "inset(50%)",
@@ -22,27 +23,27 @@ export function VideoManager() {
     whiteSpace: "nowrap",
     width: 1,
   });
-  const [videoList, setVideoList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const getVideoList = async () => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get("http://localhost:8000/video/sync");
-      console.log(response);
-    } catch (error) {
-      console.error(error);
-    }
-    setIsLoading(false);
+  const handleSubmit = (file) => {
+    const formdata = new FormData();
+    formdata.append("file", file[0]);
+    axios
+      .post("http://localhost:8000/video/", formdata, {
+        "Content-Type": "multipart/form-data",
+      })
+      .then((res) => console.log(res));
   };
 
-  useEffect(() => {
-    getVideoList();
-  }, []);
+  const deleteFile = (filename) => {
+    const f = filename.toString().replace('.mp4', '')
+    axios.delete("http://localhost:8000/video/" + f)
+  }
+  useEffect(()=> {axios.get("http://localhost:8000/video/sync").then(res => console.log(res))}, [serverConnection])
 
   return (
     <>
-      <div className="flex flex-col w-full">
-        <div className="flex flex-row w-full items-center justify-between">
+      <div className="flex flex-col">
+        <div className="flex flex-row items-center justify-start gap-4">
           <h2 className="font-semibold text-2xl">Video Files</h2>
 
           <Button
@@ -55,7 +56,7 @@ export function VideoManager() {
             Upload files
             <VisuallyHiddenInput
               type="file"
-              onChange={(event) => console.log(event.target.files)}
+              onChange={(event) => handleSubmit(event.target.files)}
               multiple
             />
           </Button>
@@ -75,7 +76,12 @@ export function VideoManager() {
             ""
           )}
           {videoList.map((x) => (
-            <ListItem>{x}</ListItem>
+            <ListItem>
+              <ListItemText>{x}</ListItemText>
+              <Button startIcon={<DeleteIcon />} onClick={() => deleteFile(x)} color="error" variant="contained">刪除</Button>
+              
+              
+              </ListItem>
           ))}
         </List>
       </div>
