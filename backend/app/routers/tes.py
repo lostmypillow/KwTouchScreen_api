@@ -1,53 +1,158 @@
-from typing import Iterable
-import smbclient as smb
-from pathlib import Path
 from itertools import cycle
-import os
-import pprint
 
-SMB_SERVER = os.getenv('SMB_SERVER')
-SMB_USERNAME = os.getenv('SMB_USERNAME')
-SMB_PASSWORD = os.getenv('SMB_PASSWORD')
-
-
-smb_dir = f"\\\\{SMB_SERVER}\\kwwebsite\\kwad"
-
-# (root)/static
-local_dir = Path(__file__).resolve().parent.parent.parent / "static"
-
-video_queue: list[dict] = []
-
-
-def create_cycler(iterable: Iterable):
+x = [1, 2, 3]
+def create_cycler(iterable):
     cycler = cycle(iterable)
 
     def next_video():
         return next(cycler)
     return next_video
 
-
-get_next_vid = create_cycler(video_queue)
-
-
-# Register SMB session to be reused
-smb.register_session(SMB_SERVER, username=SMB_USERNAME, password=SMB_PASSWORD)
-print("meow")
-smb_files = [
-    file.smb_info._asdict()
-    for file in smb.scandir(smb_dir)
-    if file.name.endswith('.mp4')
-]
-
-for file in smb_files:
-    if not (local_dir / file['file_name']).exists():
-        print(f"{file['file_name']} does not exist")
-        with smb.open_file(f"{smb_dir}\\{file['file_name']}", mode="rb") as smb_file:
-            with open(f"{local_dir}\\{file['file_name']}", mode="wb") as local_file:
-                local_file.write(smb_file.read())
-                print(f"Saved file at{local_dir /  file['file_name']}")
-                
-    else:
-        print(f"{file['file_name']} exists. Skipping!")
-    print(f"Relative URL: /static/{file['file_name']}")
-
-
+y = create_cycler(x)
+print(y())
+print(y())
+print(y())
+print(y())
+{
+  "from": "server",
+  "action": "update",
+  "message": {
+    "classes_today": [
+      {
+        "教室": 2,
+        "內容": "微積分B班(13)共補",
+        "時間": "09:00",
+        "共補": 1
+      },
+      {
+        "教室": 3,
+        "內容": "微積分C班共補(8)",
+        "時間": "09:00",
+        "共補": 1
+      }
+    ],
+    "class_with_seats": {
+      "主檔號": 4,
+      "班級名稱": "102暑秋高一試聽班",
+      "班別": "試聽數學班",
+      "座位": [
+        {
+          "座位": "A09",
+          "號碼": "55154"
+        },
+        {
+          "座位": "A13",
+          "號碼": "55155"
+        },
+        {
+          "座位": "A15",
+          "號碼": "55156"
+        },
+        {
+          "座位": "B08",
+          "號碼": "55157"
+        },
+        {
+          "座位": "B11",
+          "號碼": "55158"
+        },
+        {
+          "座位": "B15",
+          "號碼": "55159"
+        },
+        {
+          "座位": "C11",
+          "號碼": "55160"
+        },
+        {
+          "座位": "D10",
+          "號碼": "55161"
+        },
+        {
+          "座位": "E09",
+          "號碼": "55162"
+        },
+        {
+          "座位": "E11",
+          "號碼": "55163"
+        },
+        {
+          "座位": "G09",
+          "號碼": "55164"
+        },
+        {
+          "座位": "G14",
+          "號碼": "55165"
+        },
+        {
+          "座位": "H10",
+          "號碼": "55166"
+        },
+        {
+          "座位": "I15",
+          "號碼": "55167"
+        },
+        {
+          "座位": "I13",
+          "號碼": "55168"
+        },
+        {
+          "座位": "A22",
+          "號碼": "55170"
+        },
+        {
+          "座位": "B21",
+          "號碼": "55171"
+        },
+        {
+          "座位": "B23",
+          "號碼": "55172"
+        },
+        {
+          "座位": "B18",
+          "號碼": "55173"
+        },
+        {
+          "座位": "D22",
+          "號碼": "55174"
+        },
+        {
+          "座位": "E22",
+          "號碼": "55175"
+        },
+        {
+          "座位": "F18",
+          "號碼": "55176"
+        },
+        {
+          "座位": "F23",
+          "號碼": "55177"
+        },
+        {
+          "座位": "H17",
+          "號碼": "55178"
+        },
+        {
+          "座位": "H21",
+          "號碼": "55179"
+        },
+        {
+          "座位": "I20",
+          "號碼": "55180"
+        },
+        {
+          "座位": "I22",
+          "號碼": "55181"
+        },
+        {
+          "座位": "J18",
+          "號碼": "55182"
+        },
+        {
+          "座位": "J22",
+          "號碼": "55183"
+        }
+      ]
+    }
+  }
+}
