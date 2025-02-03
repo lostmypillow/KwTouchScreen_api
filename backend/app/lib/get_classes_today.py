@@ -1,9 +1,26 @@
 from typing import Any, Union
 from app.database.async_operations import exec_sql
 from datetime import datetime
+import os
 
 
 async def get_classes_today() -> list[dict[str, Union[str, int]]]:
+    if os.getenv('DEBUG') == 'True':
+        return [
+            {
+                "教室": "302教室",
+                "內容": "微積分B班(13)共補",
+                "時間": "09:00",
+                "共補": 1
+            },
+            {
+                "教室": "303教室",
+                "內容": "微積分C班共補(8)",
+                "時間": "09:00",
+                "共補": 1
+            }
+        ]
+
     # current_date = datetime.now().strftime('%Y/%m/%d')
 
     # h = datetime.now().hour
@@ -33,19 +50,3 @@ async def get_classes_today() -> list[dict[str, Union[str, int]]]:
                 "會議室"
             ][c['教室'] - 1]
     return classes_today
-
-
-# [
-#   {
-#     "教室": 2,
-#     "內容": "微積分B班(13)共補",
-#     "時間": "09:00",
-#     "共補": 1
-#   },
-#   {
-#     "教室": 3,
-#     "內容": "微積分C班共補(8)",
-#     "時間": "09:00",
-#     "共補": 1
-#   }
-# ]
