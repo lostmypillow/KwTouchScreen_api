@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     SMB_FOLDER: str = "\\kwwebsite\\kwad"
     SMB_USERNAME: str = "exam"
     SMB_PASSWORD: str = "exam"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
 
 # TODO replace debug values
