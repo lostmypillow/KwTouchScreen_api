@@ -33,7 +33,7 @@ const onFileSelect = async (event) => {
 };
 const connectedToServer = ref(false);
 const connectedToClient = ref(false);
-const videoList = ref(["meow", "meow2"]);
+const videoList = ref(["No files present on disk"]);
 const selectedVideo = ref("");
 const isUploading = ref(false);
 
@@ -120,42 +120,13 @@ const deleteVid = async () => {
 </script>
 
 <template>
-  <main class="p-4">
-    <h1 class="text-3xl font-bold mb-4">觸控螢幕 API / KwTouchScreen API</h1>
+  <main class="flex flex-col p-4">
+    <div>
+    <h1 class="text-3xl font-bold mb-4">觸控螢幕 API / KwTouchScreen API</h1></div>
     <div
-      class="flex md:flex-row md:flex-wrap flex-col items-start justify-start"
+      class="flex md:flex-row md:flex-wrap flex-col md:items-start md:justify-start items-center justify-center"
     >
-      <div class="w-1/4 p-4">
-        <Card v-if="classesToday">
-          <template #title>Classes Today</template>
-          <template #content>
-            <DataTable :value="classesToday">
-              <Column field="教室" header="教室"></Column>
-              <Column field="內容" header="內容"></Column>
-              <Column field="時間" header="時間"></Column>
-              <Column field="共補" header="共補"></Column>
-            </DataTable>
-          </template>
-        </Card>
-      </div>
-
-      <div class="w-1/4 p-4">
-        <Card>
-          <template #title>Class With Seats</template>
-          <template #content>
-            <h2 class="text-xl">
-              {{ classWithSeats.班別 + " (" + classWithSeats.班級名稱 + ")" }}
-            </h2>
-            <p>主檔號: {{ classWithSeats.主檔號 }}</p>
-            <p>
-              男座位剩餘 {{ classWithSeats.男座位.length }} 、女座位剩餘
-              {{ classWithSeats.女座位.length }}
-            </p>
-          </template>
-        </Card>
-      </div>
-
-      <div class="w-1/4 p-4">
+    <div class="md:w-1/4 w-full p-4">
         <Card>
           <template #title>Connection Status</template>
           <template #content>
@@ -182,8 +153,39 @@ const deleteVid = async () => {
           </template>
         </Card>
       </div>
+      <div class="md:w-1/4 w-full p-4">
+        <Card v-if="classesToday">
+          <template #title>Classes Today</template>
+          <template #content>
+            <DataTable :value="classesToday">
+              <Column field="教室" header="教室"></Column>
+              <Column field="內容" header="內容"></Column>
+              <Column field="時間" header="時間"></Column>
+              <Column field="共補" header="共補"></Column>
+            </DataTable>
+          </template>
+        </Card>
+      </div>
 
-      <div class="w-1/4 p-4">
+      <div class="md:w-1/4 w-full p-4">
+        <Card>
+          <template #title>Class With Seats</template>
+          <template #content>
+            <h2 class="text-xl">
+              {{ classWithSeats.班別 + " (" + classWithSeats.班級名稱 + ")" }}
+            </h2>
+            <p>主檔號: {{ classWithSeats.主檔號 }}</p>
+            <p>
+              男座位剩餘 {{ classWithSeats.男座位.length }} 、女座位剩餘
+              {{ classWithSeats.女座位.length }}
+            </p>
+          </template>
+        </Card>
+      </div>
+
+   
+
+      <div class="md:w-1/4 w-full p-4">
         <Card>
           <template #title>
             <div class="flex w-full items-center justify-between gap-4">
