@@ -4,6 +4,31 @@ import { useToast } from "primevue/usetoast";
 import axios from "axios";
 const toast = useToast();
 
+// VIDEO logic
+const videoList = ref(["No files present on disk"]);
+const selectedVideo = ref("");
+const isUploading = ref(false);
+const isDeleting = ref(false);
+
+const getVideoList = async () => {
+  try {
+    videoList.value = await axios.get(`http://192.168.2.17:8004/all/`);
+    toast.add({
+      severity: "success",
+      summary: "Fetch Successful",
+      detail: "Video list updated",
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Upload Failed",
+      detail: "Video list failed to update",
+      life: 3000,
+    });
+  }
+};
+
 const onFileSelect = async (event) => {
   const file = event.files[0];
   if (!file) return;
@@ -12,7 +37,7 @@ const onFileSelect = async (event) => {
   formData.append("file", file);
 
   try {
-    await axios.post(`http://${window.location.host}/video/`, formData, {
+    await axios.post(`http://192.168.2.17:8004/upload/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     toast.add({
@@ -31,12 +56,34 @@ const onFileSelect = async (event) => {
     });
   }
 };
+
+const deleteVid = async () => {
+  isDeleting.value = true;
+  const f = selectedVideo.value.toString();
+  try {
+    await axios.delete(`http://192.168.2.17:8004/video/${f}`);
+    toast.add({
+      severity: "success",
+      summary: "Deletion Complete",
+      detail: "File deleted",
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Deletion Failed",
+      detail: "File deletion failed",
+      life: 3000,
+    });
+  } finally {
+    isDeleting.value = false;
+    selectedVideo.value = "";
+  }
+};
+// VIDEO logic end
+
 const connectedToServer = ref(false);
 const connectedToClient = ref(false);
-const videoList = ref(["No files present on disk"]);
-const selectedVideo = ref("");
-const isUploading = ref(false);
-
 const isConnected = ref(true);
 const classesToday = ref([]);
 const classWithSeats = ref({
@@ -61,13 +108,11 @@ const initWs = () => {
   ws.value.onmessage = (event) => {
     console.log("Message received");
     const message = JSON.parse(event.data);
-    if (message.action == "update queue") {
-      videoList.value = message.message;
-    } else if (message.action == "update client status") {
+    if (message.action == "update client status") {
       connectedToClient.value = message.message == "connected" ? true : false;
     } else if (message.action == "update class") {
-      classesToday.value = message.message.classes_today
-      classWithSeats.value = message.message.class_with_seats
+      classesToday.value = message.message.classes_today;
+      classWithSeats.value = message.message.class_with_seats;
     } else {
       console.log(message);
     }
@@ -86,47 +131,27 @@ const initWs = () => {
     connectedToServer.value = false;
   };
 };
-onMounted(() => initWs());
+onMounted(async () => {
+  initWs();
+  await getVideoList();
+});
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
     console.log("WebSocket closed on unmount");
   }
 });
-const isDeleting = ref(false);
-const deleteVid = async () => {
-  isDeleting.value = true;
-  const f = selectedVideo.value.toString().replace(".mp4", "");
-  try {
-    await axios.delete(`http://${window.location.host}/video/${f}`);
-    toast.add({
-      severity: "success",
-      summary: "Deletion Complete",
-      detail: "File deleted",
-      life: 3000,
-    });
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Deletion Failed",
-      detail: "File deletion failed",
-      life: 3000,
-    });
-  } finally {
-    isDeleting.value = false;
-    selectedVideo.value = ''
-  }
-};
 </script>
 
 <template>
   <main class="flex flex-col p-4">
     <div>
-    <h1 class="text-3xl font-bold mb-4">觸控螢幕 API / KwTouchScreen API</h1></div>
+      <h1 class="text-3xl font-bold mb-4">觸控螢幕 API / KwTouchScreen API</h1>
+    </div>
     <div
       class="flex md:flex-row md:flex-wrap flex-col md:items-start md:justify-start items-center justify-center"
     >
-    <div class="md:w-1/4 w-full p-4">
+      <div class="md:w-1/4 w-full p-4">
         <Card>
           <template #title>Connection Status</template>
           <template #content>
@@ -183,8 +208,6 @@ const deleteVid = async () => {
         </Card>
       </div>
 
-   
-
       <div class="md:w-1/4 w-full p-4">
         <Card>
           <template #title>
@@ -214,9 +237,8 @@ const deleteVid = async () => {
                 customUpload
                 @select="onFileSelect"
                 accept="video/*"
-                chooseLabel="Upload more"
+                :chooseLabel="[isUploading ? 'Uploading...' : 'Upload more']"
               />
-              
             </div>
           </template>
         </Card>
@@ -229,5 +251,4 @@ const deleteVid = async () => {
 .p-fileupload span {
   display: none;
 }
-
 </style>
