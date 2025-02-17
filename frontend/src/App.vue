@@ -12,7 +12,7 @@ const isDeleting = ref(false);
 
 const getVideoList = async () => {
   try {
-    videoList.value = await axios.get(`http://192.168.2.17:8004/all/`);
+    videoList.value = await (await axios.get(`http://192.168.2.17:8004/all/`)).data;
     toast.add({
       severity: "success",
       summary: "Fetch Successful",
@@ -237,7 +237,7 @@ onUnmounted(() => {
                 customUpload
                 @select="onFileSelect"
                 accept="video/*"
-                :chooseLabel="[isUploading ? 'Uploading...' : 'Upload more']"
+                :chooseLabel="isUploading ? 'Uploading...' : 'Upload more'"
               />
             </div>
           </template>
