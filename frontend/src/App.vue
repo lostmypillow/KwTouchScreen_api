@@ -11,8 +11,11 @@ const isUploading = ref(false);
 const isDeleting = ref(false);
 
 const getVideoList = async () => {
+  videoList.value = ["Fetching files"]
   try {
-    videoList.value = await (await axios.get(`http://192.168.2.17:8004/all/`)).data;
+    videoList.value = await (
+      await axios.get(`http://192.168.2.17:8004/all/`)
+    ).data;
     toast.add({
       severity: "success",
       summary: "Fetch Successful",
@@ -30,20 +33,22 @@ const getVideoList = async () => {
 };
 
 const onFileSelect = async (event) => {
+  isUploading.value = true;
   const file = event.files[0];
   if (!file) return;
 
   const formData = new FormData();
   formData.append("file", file);
-
+  let response
   try {
-    await axios.post(`http://192.168.2.17:8004/upload/`, formData, {
+    response = await axios.post(`http://192.168.2.17:8004/upload/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    await getVideoList();
     toast.add({
       severity: "success",
       summary: "Upload Complete",
-      detail: "File upload done",
+      detail: response.data.message,
       life: 3000,
     });
   } catch (error) {
@@ -54,6 +59,8 @@ const onFileSelect = async (event) => {
       detail: "File upload failed",
       life: 3000,
     });
+  } finally {
+    isUploading.value = false;
   }
 };
 
@@ -62,6 +69,7 @@ const deleteVid = async () => {
   const f = selectedVideo.value.toString();
   try {
     await axios.delete(`http://192.168.2.17:8004/video/${f}`);
+    await getVideoList();
     toast.add({
       severity: "success",
       summary: "Deletion Complete",
@@ -197,12 +205,22 @@ onUnmounted(() => {
           <template #title>Class With Seats</template>
           <template #content>
             <h2 class="text-xl">
-              {{ classWithSeats.班別 + " (" + classWithSeats.班級名稱 + ")" }}
+              {{
+                classWithSeats.班別
+                  ? classWithSeats.班別 + " (" + classWithSeats.班級名稱 + ")"
+                  : ""
+              }}
             </h2>
-            <p>主檔號: {{ classWithSeats.主檔號 }}</p>
             <p>
-              男座位剩餘 {{ classWithSeats.男座位.length }} 、女座位剩餘
-              {{ classWithSeats.女座位.length }}
+              主檔號: {{ classWithSeats.主檔號 ? classWithSeats.主檔號 : "" }}
+            </p>
+            <p>
+              男座位剩餘
+              {{
+                classWithSeats.男座位 ? classWithSeats.男座位.length : ""
+              }}
+              、女座位剩餘
+              {{ classWithSeats.女座位 ? classWithSeats.女座位.length : "" }}
             </p>
           </template>
         </Card>
