@@ -12,7 +12,7 @@ const isDeleting = ref(false);
 
 const getVideoList = async () => {
   try {
-    videoList.value = await (await axios.get(`http://192.168.2.17:8004/all/`)).data;
+    videoList.value = await (await axios.get(`http://${import.meta.env.VITE_SERVER_URL}/all/`)).data;
     toast.add({
       severity: "success",
       summary: "Fetch Successful",
@@ -37,7 +37,7 @@ const onFileSelect = async (event) => {
   formData.append("file", file);
 
   try {
-    await axios.post(`http://192.168.2.17:8004/upload/`, formData, {
+    await axios.post(`http://${import.meta.env.VITE_SERVER_URL}/upload/`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     toast.add({
@@ -61,7 +61,7 @@ const deleteVid = async () => {
   isDeleting.value = true;
   const f = selectedVideo.value.toString();
   try {
-    await axios.delete(`http://192.168.2.17:8004/video/${f}`);
+    await axios.delete(`http://${import.meta.env.VITE_SERVER_URL}/video/${f}`);
     toast.add({
       severity: "success",
       summary: "Deletion Complete",

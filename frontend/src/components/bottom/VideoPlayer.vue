@@ -5,13 +5,13 @@ import axios from "axios";
 
 const fileName = ref("")
 
-const videoURL = computed(() => "http://" + '192.168.2.17:8004' + "/video/" + fileName.value);
+const videoURL = computed(() => "http://" + import.meta.env.VITE_SERVER_URL + "/video/" + fileName.value);
 
 const videoPlayerRef = ref(null);
 
 
 const getNext = async () => {
-  const response = await axios.get('http://' + '192.168.2.17:8004' + "/next");
+  const response = await axios.get('http://' + import.meta.env.VITE_SERVER_URL + "/next");
   if (response.status != 200) {
     console.error(response)
   } else {
