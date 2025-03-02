@@ -17,7 +17,6 @@ declare module 'vue' {
     FileUpload: typeof import('primevue/fileupload')['default']
     Listbox: typeof import('primevue/listbox')['default']
     NumButton: typeof import('./src/components/buttons/NumButton.vue')['default']
-    ProgressSpinner: typeof import('primevue/progressspinner')['default']
     Rating: typeof import('primevue/rating')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

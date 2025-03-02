@@ -3,7 +3,7 @@ import { useRouter } from "vue-router";
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { userStore } from "../../store/userStore";
 import { useRoute } from "vue-router";
-import Countdown from "../../lib/countdown";
+import Countdown from "../../lib/Countdown";
 import { alertStore } from "../../store/alertStore";
 import DeleteButton from "../../components/buttons/DeleteButton.vue";
 import NumButton from "../../components/buttons/NumButton.vue";

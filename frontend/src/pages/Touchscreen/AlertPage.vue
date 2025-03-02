@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { alertStore } from "../../store/alertStore";
-import Countdown from "../../lib/countdown";
+import Countdown from "../../lib/Countdown";
 import { commonStore } from "../../store/commonStore";
 defineProps(["error"]);
 

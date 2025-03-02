@@ -12,6 +12,7 @@ export default defineConfig({
       resolvers: [PrimeVueResolver()],
     }),
   ],
+  base:'/touch',
   build: {
     outDir: "../backend/public", // Output to backend/public
     emptyOutDir: true, // Delete existing files before building

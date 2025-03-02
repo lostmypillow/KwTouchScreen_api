@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { alertStore } from "../../store/alertStore";
 import { useRoute } from "vue-router";
-import Countdown from "../../lib/countdown";
+import Countdown from "../../lib/Countdown";
 import { commonStore } from "../../store/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
 import Button from "primevue/button";
