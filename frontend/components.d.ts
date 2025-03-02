@@ -8,12 +8,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BackButton: typeof import('./src/components/buttons/BackButton.vue')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
-    Column: typeof import('primevue/column')['default']
-    DataTable: typeof import('primevue/datatable')['default']
     DeleteButton: typeof import('./src/components/buttons/DeleteButton.vue')['default']
-    EmployeeImage: typeof import('./src/components/EmployeeImage.vue')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
     Listbox: typeof import('primevue/listbox')['default']
     NumButton: typeof import('./src/components/buttons/NumButton.vue')['default']
@@ -21,6 +19,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollPanel: typeof import('primevue/scrollpanel')['default']
+    Skeleton: typeof import('primevue/skeleton')['default']
     Status: typeof import('./src/components/top/Status.vue')['default']
     Toast: typeof import('primevue/toast')['default']
     VideoPlayer: typeof import('./src/components/bottom/VideoPlayer.vue')['default']

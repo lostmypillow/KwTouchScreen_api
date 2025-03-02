@@ -1,22 +1,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted, Transition, watch } from "vue";
-import { statusStore } from "../../store/statusStore";
 import websocketService from "../../lib/websocketService";
-import axios from "axios";
 import { commonStore } from "../../store/commonStore";
 import { useRouter, useRoute } from "vue-router";
+
 const router = useRouter();
 const route = useRoute();
-const goHome = () => {
-  console.log("go home");
-  commonStore.clear();
-  router.push("/app/home");
-  
-};
 
 /// Time
 const currentTime = ref(new Date());
-
 const formatTime = (date) => {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -24,20 +16,22 @@ const formatTime = (date) => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
-const formatDate = (date) =>
-  date.toLocaleDateString("zh-TW", {
+const formatDate = (date) => {
+  const formattedDate = date.toLocaleDateString("zh-TW", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
+  return formattedDate;
+};
+
 const timeInterval = setInterval(() => {
   currentTime.value = new Date();
 }, 1000);
-///
 
-// Status
+///
 
 const classesToday = ref([]);
 const classWithSeat = ref({});
@@ -49,26 +43,36 @@ const startAlternatingClass = () => {
   if (classesToday.value.length > 0) {
     classInterval = setInterval(() => {
       currentIndex.value = (currentIndex.value + 1) % classesToday.value.length;
+      console.log(
+        `[Status.vue] [${new Date().toISOString()}] startAlternatingClass: currentIndex updated to ${
+          currentIndex.value
+        }`
+      );
     }, 5000);
   }
 };
 
-const stopAlternatingClass = () => clearInterval(classInterval);
-
-// onMounted(() => {
-//   if (classesToday.value.length > 0) {
-//     startAlternatingClass();
-//   }
-// });
+const stopAlternatingClass = () => {
+  clearInterval(classInterval);
+  console.log(
+    `[Status.vue] [${new Date().toISOString()}] stopAlternatingClass: interval cleared`
+  );
+};
 
 onUnmounted(() => {
   stopAlternatingClass();
   clearInterval(timeInterval);
+  console.log(
+    `[Status.vue] [${new Date().toISOString()}] onUnmounted: timeInterval and classInterval cleared`
+  );
 });
 
 watch(
   () => classesToday.value.length,
   (newLength) => {
+    console.log(
+      `[Status.vue] [${new Date().toISOString()}] watch: classesToday length changed to ${newLength}`
+    );
     if (newLength > 0) {
       startAlternatingClass();
     } else {
@@ -78,9 +82,12 @@ watch(
 );
 
 watch(websocketService.receivedMessage, (newMessage) => {
+  console.log(
+    `[Status.vue] [${new Date().toISOString()}] watch: receivedMessage updated with newMessage: ${JSON.stringify(
+      newMessage
+    )}`
+  );
   if (newMessage.action == "update class") {
-    console.log(newMessage);
-
     classesToday.value = newMessage.message.classes_today;
     classWithSeat.value = newMessage.message.class_with_seats;
     commonStore.today_class_4_auth = classWithSeat.value.班別
@@ -89,6 +96,11 @@ watch(websocketService.receivedMessage, (newMessage) => {
     commonStore.today_class_4_display = classWithSeat.value.班級名稱;
     commonStore.male_seats = classWithSeat.value.男座位;
     commonStore.female_seats = classWithSeat.value.女座位;
+    console.log(
+      `[Status.vue] [${new Date().toISOString()}] Class and seat info updated in commonStore: ${JSON.stringify(
+        commonStore
+      )}`
+    );
   }
 });
 </script>
@@ -137,46 +149,27 @@ watch(websocketService.receivedMessage, (newMessage) => {
         </div>
       </Transition>
     </div>
-
-    <!-- <div
-      v-show="Object.keys(classWithSeat).length > 0"
-      class="text-red-500 flex w-full items-center justify-center text-2xl font-bold"
-    >
-      {{
-        classWithSeat
-          ? classWithSeat?.班級名稱 +
-            "補位剩餘 男:" +
-            classWithSeat.男座位?.length +
-            ", 女:" +
-            classWithSeat.女座位?.length
-          : "\u00A0"
-      }}
-    </div> -->
     <div
-      :class="[
-        route.fullPath != '/app/home' && route.fullPath != '/app/alert'
-          ? 'justify-between'
-          : 'justify-center',
-        'text-red-500 flex flex-row w-full items-center  gap-4 px-4',
-      ]"
+      class="justify-center text-red-500 flex flex-row w-full items-center  gap-4 px-4 
+      "
     >
- 
-      <Button
-        v-if="route.fullPath != '/app/home' && route.fullPath != '/app/alert'"
-        @click="goHome"
-        
-        ><i class="pi pi-home"></i>回主畫面</Button
+      <p
+        class="text-2xl font-bold"
+        v-if="Object.keys(classWithSeat).length > 0"
       >
-      <p class="text-2xl font-bold" v-if="Object.keys(classWithSeat).length > 0"> {{
-        classWithSeat
-          ? classWithSeat?.班級名稱 +
-            "補位剩餘 男:" +
-            classWithSeat.男座位?.length +
-            ", 女:" +
-            classWithSeat.女座位?.length
-          : "\u00A0"
-      }}</p>
-      <span v-if="route.fullPath != '/app/home' && route.fullPath != '/app/alert'"></span>
+        {{
+          classWithSeat
+            ? classWithSeat?.班級名稱 +
+              "補位剩餘 男:" +
+              classWithSeat.男座位?.length +
+              ", 女:" +
+              classWithSeat.女座位?.length
+            : "\u00A0"
+        }}
+      </p>
+      <span
+        v-if="route.fullPath != '/home' && route.fullPath != '/alert'"
+      ></span>
     </div>
   </div>
 </template>

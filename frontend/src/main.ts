@@ -28,7 +28,8 @@ import DashboardPage from "./pages/DashboardPage.vue";
 import RootLayout from "./pages/Touchscreen/RootLayout.vue";
 const routes = [
   {
-    path: "/app",
+    path: "/",
+    redirect: 'home',
     component: RootLayout,
     children: [
       {
@@ -51,17 +52,18 @@ const routes = [
         path: "survey",
         component: SurveyPage,
       },
+      {
+        path: "/dashboard",
+        component: DashboardPage,
+      },
     ],
   },
 
-  {
-    path: "/dashboard",
-    component: DashboardPage,
-  },
+  
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/touch/'),
   routes,
 });
 
@@ -92,13 +94,6 @@ createApp(App)
       options: { darkModeSelector: ".fake-dark-selector" },
     },
   })
-  .component("Button", Button)
-  .component("InputText", InputText)
-  .component("InputGroup", InputGroup)
-  .component("Listbox", Listbox)
-  .component("Rating", Rating)
-  .component("ProgressSpinner", ProgressSpinner)
-  .component("ScrollPanel", ScrollPanel)
   .use(autoAnimatePlugin)
   .use(ToastService)
 

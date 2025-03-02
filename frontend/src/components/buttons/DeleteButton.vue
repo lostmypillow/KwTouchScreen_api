@@ -6,7 +6,7 @@ import Button from "primevue/button";
     <Button
         severity="danger"
       
-        size="small"
+        size="large"
         icon="pi pi-delete-left"
         label="刪除"
       />

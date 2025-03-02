@@ -2,62 +2,77 @@ import { ref } from 'vue';
 
 let ws;
 let reconnectAttempts = 0;
-let heartbeatInterval;
 
 // Create a reactive ref to store the received message
 const receivedMessage = ref(null);
 
+// Helper function to get current timestamp
+const getTimestamp = () => {
+    return new Date().toISOString();
+};
+
+// Modified log function to add timestamps
+const logWithTimestamp = (level, message) => {
+    console[level](`[websocketService.js] [${getTimestamp()}] ${message}`);
+};
+
 const initializeWebSocket = () => {
-    ws = new WebSocket('ws://'+ import.meta.env.VITE_SERVER_URL +'/ws/client');
+    logWithTimestamp('log', 'Initializing WebSocket connection...');
+    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/client');
 
     ws.onopen = () => {
-        console.log('WebSocket Connected');
+        logWithTimestamp('log', 'WebSocket Connected');
         reconnectAttempts = 0;
     };
 
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        // console.log('Received message:', data);
-        receivedMessage.value = data;
+        try {
+            const data = JSON.parse(event.data);
+            logWithTimestamp('log', `Received message: ${JSON.stringify(data)}`);
+            receivedMessage.value = data;
+        } catch (error) {
+            logWithTimestamp('error', `Error parsing message: ${error}`);
+        }
     };
 
     ws.onclose = () => {
-        console.log('WebSocket Disconnected');
-        clearInterval(heartbeatInterval);
+        logWithTimestamp('log', 'WebSocket Disconnected');
         attemptReconnect();
     };
 
     ws.onerror = (error) => {
-        console.log('WebSocket Error:', error);
-        clearInterval(heartbeatInterval);
+        logWithTimestamp('error', `WebSocket Error: ${error}`);
         ws.close(); // Ensure it's closed before attempting reconnection
     };
 };
 
-const sendMessage = (action, message, recipient = "server") => {
+const sendMessage = (action, message, recipient = 'server') => {
     if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            "from": "client",
-            "to": recipient,
-            "action": action,
-            "message": message
-        }));
+        try {
+            logWithTimestamp('log', `Sending message: { action: ${action}, message: ${message}, recipient: ${recipient} }`);
+            ws.send(JSON.stringify({
+                from: 'client',
+                to: recipient,
+                action: action,
+                message: message
+            }));
+        } catch (error) {
+            logWithTimestamp('error', `Error sending message: ${error}`);
+        }
     } else {
-        console.warn('WebSocket not open. Message not sent:', message);
+        logWithTimestamp('warn', `WebSocket not open. Message not sent: ${message}`);
     }
 };
-
-
 
 const attemptReconnect = () => {
     if (reconnectAttempts < 5) {
         setTimeout(() => {
-            console.log(`Attempting to reconnect... (${reconnectAttempts + 1})`);
+            logWithTimestamp('log', `Attempting to reconnect... (${reconnectAttempts + 1})`);
             reconnectAttempts++;
             initializeWebSocket();
         }, 2000 * reconnectAttempts); // Backoff delay (e.g., 2s, 4s, 6s, etc.)
     } else {
-        console.error('Max reconnect attempts reached. Unable to reconnect.');
+        logWithTimestamp('error', 'Max reconnect attempts reached. Unable to reconnect.');
     }
 };
 

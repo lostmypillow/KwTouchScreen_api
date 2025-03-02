@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
 const toast = useToast();
@@ -10,9 +10,24 @@ const selectedVideo = ref("");
 const isUploading = ref(false);
 const isDeleting = ref(false);
 
+// Retry logic helper function
+const retryRequest = async (fn, retries = 3, delay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      console.error(`Attempt ${i + 1} failed:`, error);
+      if (i < retries - 1) await new Promise((res) => setTimeout(res, delay));
+    }
+  }
+  throw new Error("All retry attempts failed");
+};
+
 const getVideoList = async () => {
   try {
-    videoList.value = await (await axios.get(`http://${import.meta.env.VITE_SERVER_URL}/all/`)).data;
+    videoList.value = await retryRequest(async () => {
+      return (await axios.get(`http://${import.meta.env.VITE_VIDEO_URL}/all/`)).data;
+    });
     toast.add({
       severity: "success",
       summary: "Fetch Successful",
@@ -22,7 +37,7 @@ const getVideoList = async () => {
   } catch (error) {
     toast.add({
       severity: "error",
-      summary: "Upload Failed",
+      summary: "Fetch Failed",
       detail: "Video list failed to update",
       life: 3000,
     });
@@ -35,11 +50,14 @@ const onFileSelect = async (event) => {
 
   const formData = new FormData();
   formData.append("file", file);
+  isUploading.value = true;
 
   try {
-    await axios.post(`http://${import.meta.env.VITE_SERVER_URL}/upload/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    await retryRequest(() =>
+      axios.post(`http://${import.meta.env.VITE_VIDEO_URL}/upload/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+    );
     toast.add({
       severity: "success",
       summary: "Upload Complete",
@@ -47,21 +65,23 @@ const onFileSelect = async (event) => {
       life: 3000,
     });
   } catch (error) {
-    console.error(error);
     toast.add({
       severity: "error",
       summary: "Upload Failed",
-      detail: "File upload failed",
+      detail: "File upload failed after retries",
       life: 3000,
     });
+  } finally {
+    isUploading.value = false;
   }
 };
 
 const deleteVid = async () => {
   isDeleting.value = true;
   const f = selectedVideo.value.toString();
+
   try {
-    await axios.delete(`http://${import.meta.env.VITE_SERVER_URL}/video/${f}`);
+    await retryRequest(() => axios.delete(`http://${import.meta.env.VITE_VIDEO_URL}/video/${f}`));
     toast.add({
       severity: "success",
       summary: "Deletion Complete",
@@ -72,7 +92,7 @@ const deleteVid = async () => {
     toast.add({
       severity: "error",
       summary: "Deletion Failed",
-      detail: "File deletion failed",
+      detail: "File deletion failed after retries",
       life: 3000,
     });
   } finally {
@@ -83,58 +103,43 @@ const deleteVid = async () => {
 // VIDEO logic end
 
 const connectedToServer = ref(false);
-const connectedToClient = ref(false);
-const isConnected = ref(true);
-const classesToday = ref([]);
-const classWithSeats = ref({
-  主檔號: 0,
-  班級名稱: "",
-  班別: "",
-  男座位: [],
-  女座位: [],
-});
 const ws = ref(null);
+
 const initWs = () => {
-  ws.value = new WebSocket(`ws://${window.location.host}/ws/control`);
-  console.log(`ws://${window.location.host}/ws/control`);
+  const connectWebSocket = () => {
+    ws.value = new WebSocket(`ws://${import.meta.env.VITE_SERVER_URL}/ws/control`);
+    console.log(`Attempting WebSocket connection...`);
 
-  // On WebSocket open, set connection state to true
-  ws.value.onopen = () => {
-    console.log("WebSocket connected");
-    connectedToServer.value = true;
+    ws.value.onopen = () => {
+      console.log("WebSocket connected");
+      connectedToServer.value = true;
+    };
+
+    ws.value.onmessage = (event) => {
+      console.log("Message received", event.data);
+    };
+
+    ws.value.onerror = (error) => {
+      console.error("WebSocket error: ", error);
+      connectedToServer.value = false;
+      ws.value.close();
+    };
+
+    ws.value.onclose = () => {
+      console.log("WebSocket disconnected, retrying in 3s...");
+      connectedToServer.value = false;
+      setTimeout(connectWebSocket, 3000);
+    };
   };
 
-  // On WebSocket message, update server connection state
-  ws.value.onmessage = (event) => {
-    console.log("Message received");
-    const message = JSON.parse(event.data);
-    if (message.action == "update client status") {
-      connectedToClient.value = message.message == "connected" ? true : false;
-    } else if (message.action == "update class") {
-      classesToday.value = message.message.classes_today;
-      classWithSeats.value = message.message.class_with_seats;
-    } else {
-      console.log(message);
-    }
-  };
-
-  // On WebSocket error, set connection state to false
-  ws.value.onerror = (error) => {
-    console.error("WebSocket error: ", error);
-    connectedToServer.value = false;
-    ws.close();
-  };
-
-  // On WebSocket close, set connection state to false and prepare for reconnection
-  ws.value.onclose = () => {
-    console.log("WebSocket disconnected");
-    connectedToServer.value = false;
-  };
+  connectWebSocket();
 };
+
 onMounted(async () => {
   initWs();
   await getVideoList();
 });
+
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
@@ -143,10 +148,11 @@ onUnmounted(() => {
 });
 </script>
 
+
 <template>
   <main class="flex flex-col p-4">
     <div>
-      <h1 class="text-3xl font-bold mb-4">觸控螢幕 API / KwTouchScreen API</h1>
+      <h1 class="text-3xl font-extrabold mb-4">Dashboard</h1>
     </div>
     <div
       class="flex md:flex-row md:flex-wrap flex-col md:items-start md:justify-start items-center justify-center"
@@ -161,12 +167,6 @@ onUnmounted(() => {
                 >{{ connectedToServer ? "Connected" : "NOT connected" }}</span
               >
               to FastAPI WebSocket
-              <br />
-              <span
-                :class="[connectedToClient ? 'text-green-500' : 'text-red-500']"
-                >{{ connectedToClient ? "Connected" : "NOT connected" }}</span
-              >
-              to Android touch kiosk
             </p>
           </template>
           <template #footer>
@@ -178,35 +178,7 @@ onUnmounted(() => {
           </template>
         </Card>
       </div>
-      <div class="md:w-1/4 w-full p-4">
-        <Card v-if="classesToday">
-          <template #title>Classes Today</template>
-          <template #content>
-            <DataTable :value="classesToday">
-              <Column field="教室" header="教室"></Column>
-              <Column field="內容" header="內容"></Column>
-              <Column field="時間" header="時間"></Column>
-              <Column field="共補" header="共補"></Column>
-            </DataTable>
-          </template>
-        </Card>
-      </div>
-
-      <div class="md:w-1/4 w-full p-4">
-        <Card>
-          <template #title>Class With Seats</template>
-          <template #content>
-            <h2 class="text-xl">
-              {{ classWithSeats.班別 + " (" + classWithSeats.班級名稱 + ")" }}
-            </h2>
-            <p>主檔號: {{ classWithSeats.主檔號 }}</p>
-            <p>
-              男座位剩餘 {{ classWithSeats.男座位.length }} 、女座位剩餘
-              {{ classWithSeats.女座位.length }}
-            </p>
-          </template>
-        </Card>
-      </div>
+    
 
       <div class="md:w-1/4 w-full p-4">
         <Card>
@@ -232,13 +204,19 @@ onUnmounted(() => {
             <div class="flex flex-col gap-4 mt-1">
               <Toast />
               <FileUpload
+                icon="pi pi-cloud-upload"
                 :disabled="isUploading"
                 mode="basic"
                 customUpload
                 @select="onFileSelect"
                 accept="video/*"
                 :chooseLabel="isUploading ? 'Uploading...' : 'Upload more'"
-              />
+                >
+                
+                <template #empty><i class="pi pi-cloud-upload"></i></template>
+                
+               
+              </FileUpload>
             </div>
           </template>
         </Card>
