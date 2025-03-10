@@ -2,6 +2,7 @@ import { ref } from 'vue';
 
 let ws;
 let reconnectAttempts = 0;
+let reconnectTimeout = null; // Keep track of the reconnect timeout
 
 // Create a reactive ref to store the received message
 const receivedMessage = ref(null);
@@ -23,6 +24,12 @@ const initializeWebSocket = () => {
     ws.onopen = () => {
         logWithTimestamp('log', 'WebSocket Connected');
         reconnectAttempts = 0;
+
+        // ✅ Clear any pending reconnect attempts since the connection is restored
+        if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+        }
     };
 
     ws.onmessage = (event) => {
@@ -37,7 +44,7 @@ const initializeWebSocket = () => {
 
     ws.onclose = () => {
         logWithTimestamp('log', 'WebSocket Disconnected');
-        attemptReconnect();
+        attemptReconnect(); // Try to reconnect when the connection is lost
     };
 
     ws.onerror = (error) => {
@@ -65,15 +72,18 @@ const sendMessage = (action, message, recipient = 'server') => {
 };
 
 const attemptReconnect = () => {
-    if (reconnectAttempts < 5) {
-        setTimeout(() => {
-            logWithTimestamp('log', `Attempting to reconnect... (${reconnectAttempts + 1})`);
-            reconnectAttempts++;
-            initializeWebSocket();
-        }, 2000 * reconnectAttempts); // Backoff delay (e.g., 2s, 4s, 6s, etc.)
-    } else {
-        logWithTimestamp('error', 'Max reconnect attempts reached. Unable to reconnect.');
+    const backoffDelay = Math.min(2000 * reconnectAttempts, 30000); // Cap backoff at 30 seconds
+
+    // ✅ Clear any previous timeout before scheduling a new one
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
     }
+
+    reconnectTimeout = setTimeout(() => {
+        logWithTimestamp('log', `Attempting to reconnect... (${reconnectAttempts + 1})`);
+        reconnectAttempts++;
+        initializeWebSocket();
+    }, backoffDelay);
 };
 
 // Export the received message ref and the necessary functions

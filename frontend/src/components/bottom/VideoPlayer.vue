@@ -1,73 +1,120 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
 
-// Retry configuration
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 2000; // 2 seconds delay between retries
+// Retry settings
+const RETRY_DELAY = 2000; // 2 seconds delay
 
 const fileName = ref("");
 const videoURL = computed(() => "http://" + import.meta.env.VITE_VIDEO_URL + "/video/" + fileName.value);
 const videoPlayerRef = ref(null);
 
-// Function to retry an action a specified number of times
-const retryAction = async (action, retries = MAX_RETRIES) => {
-  let attempt = 0;
-  while (attempt < retries) {
+let stopped = false;
+let retryInProgress = false;
+let abortController = null;
+let inactivityTimeout = null;
+
+// Function to retry an action indefinitely until it succeeds
+const retryAction = async (action) => {
+  if (retryInProgress) return;
+
+  retryInProgress = true;
+
+  while (!stopped) {
     try {
-      await action(); // Try the action
-      return; // If successful, exit
+      // Cancel any pending request before retrying
+      if (abortController) abortController.abort();
+
+      abortController = new AbortController();
+      await action(abortController.signal);
+      retryInProgress = false;
+      return; // Success — exit loop
     } catch (error) {
-      attempt++;
-      console.error(`[VideoPlayer.vue] Attempt ${attempt} failed:`, error);
-      if (attempt >= retries) {
-        console.error("[VideoPlayer.vue] Max retries reached, stopping.");
-        break;
+      if (axios.isCancel(error)) {
+        console.warn("[VideoPlayer.vue] Request aborted, skipping retry...");
+        retryInProgress = false;
+        return;
       }
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY)); // Wait before retrying
+
+      console.error("[VideoPlayer.vue] Retry failed:", error);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
     }
   }
+
+  retryInProgress = false;
 };
 
-const attemptGetNext = () => {
+// Function to get the next video
+const attemptGetNext = async (signal) => {
   console.log("[VideoPlayer.vue] [" + new Date().toISOString() + "] Executing getNext()");
-  
-  return axios.get("http://" + import.meta.env.VITE_VIDEO_URL + "/next")
-    .then(response => {
-      if (response.status !== 200 || response.data === null) {
-        throw new Error("Failed to get next video or data is null");
-      }
-      console.log("[VideoPlayer.vue] [" + new Date().toISOString() + "] Video file name received: ", response.data);
 
-      if (videoPlayerRef.value != null) {
-        videoPlayerRef.value.src = '';
-        fileName.value = response.data;
-        videoPlayerRef.value.src = videoURL.value;
-        videoPlayerRef.value.load();
-        videoPlayerRef.value.play();
-      }
-    });
-};
+  const response = await axios.get(
+    "http://" + import.meta.env.VITE_VIDEO_URL + "/next",
+    { signal }
+  );
 
-const handleError = (event) => {
-  // Check if the error is due to unsupported format or MIME type
-  if (event.target.error.code === event.target.error.MEDIA_ERR_FORMAT) {
-    console.log("[VideoPlayer.vue] [" + new Date().toISOString() + "] Unsupported video format, retrying...");
-    retryAction(attemptGetNext);
-  } else {
-    console.error("[VideoPlayer.vue] [" + new Date().toISOString() + "] Video playback error: ", event);
-    retryAction(attemptGetNext);
+  if (response.status !== 200 || response.data === null) {
+    throw new Error("Failed to get next video or data is null");
+  }
+
+  console.log("[VideoPlayer.vue] [" + new Date().toISOString() + "] Video file name received: ", response.data);
+
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.src = '';
+    fileName.value = response.data;
+    videoPlayerRef.value.src = videoURL.value;
+    videoPlayerRef.value.load();
+    videoPlayerRef.value.play();
   }
 };
+
+// Function to handle video player errors
+const handleError = (event) => {
+  console.error("[VideoPlayer.vue] Video playback error:", event);
+  retryAction(attemptGetNext);
+};
+
+// Function to detect inactivity (paused or stopped state)
+const setupInactivityWatch = () => {
+  if (inactivityTimeout) clearTimeout(inactivityTimeout);
+
+  inactivityTimeout = setTimeout(() => {
+    if (
+      videoPlayerRef.value &&
+      videoPlayerRef.value.paused &&
+      !videoPlayerRef.value.ended
+    ) {
+      console.warn("[VideoPlayer.vue] Detected inactivity — retrying...");
+      retryAction(attemptGetNext);
+    }
+  }, 5000); // 5 seconds of inactivity triggers retry
+};
+
+// Watch video state to detect inactivity
+watch(
+  () => videoPlayerRef.value?.paused,
+  (paused) => {
+    if (paused) setupInactivityWatch();
+  }
+);
 
 onMounted(async () => {
-  console.log("[VideoPlayer.vue] [" + new Date().toISOString() + "] Component mounted, calling getNext()");
+  console.log("[VideoPlayer.vue] Component mounted, calling getNext()");
   await retryAction(attemptGetNext);
 
-  // Attach the error handler to the video element
+  // Attach error and inactivity watchers
   if (videoPlayerRef.value) {
-    videoPlayerRef.value.addEventListener('error', handleError);
+    videoPlayerRef.value.addEventListener("error", handleError);
+    videoPlayerRef.value.addEventListener("play", setupInactivityWatch);
+    videoPlayerRef.value.addEventListener("pause", setupInactivityWatch);
   }
+});
+
+onUnmounted(() => {
+  console.log("[VideoPlayer.vue] Component unmounted, stopping retries...");
+  stopped = true;
+  if (abortController) abortController.abort(); // Cancel any ongoing request
+  if (inactivityTimeout) clearTimeout(inactivityTimeout);
 });
 </script>
 
@@ -75,7 +122,7 @@ onMounted(async () => {
   <video
     ref="videoPlayerRef"
     class="flex aspect-w-16 aspect-h-9 min-h-[calc(100vw*9/16)]"
-    @ended="attemptGetNext()"
+    @ended="retryAction(attemptGetNext)"
     autoplay
   >
     <source :src="videoURL" type="video/mp4" />
