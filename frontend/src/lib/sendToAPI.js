@@ -23,7 +23,8 @@ export async function sendToAPI(urlFragment, data) {
       data: res.data,
     };
   } catch (error) {
-    console.error(`[sendToAPI.js] [${new Date().toISOString()}] Error encountered during API request: ${error.message}`);
+    console.error(`[sendToAPI.js] [${new Date().toISOString()}] Error encountered during API request:`);
+    console.error(error)
     
     if (error.response) {
       console.log(`[sendToAPI.js] [${new Date().toISOString()}] Server responded with status: ${error.response.status}, data: ${JSON.stringify(error.response.data)}`);

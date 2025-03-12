@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-
+import {v7 as uuiv7} from 'uuid'
 let ws;
 let reconnectAttempts = 0;
 let reconnectTimeout = null; // Keep track of the reconnect timeout
@@ -19,7 +19,7 @@ const logWithTimestamp = (level, message) => {
 
 const initializeWebSocket = () => {
     logWithTimestamp('log', 'Initializing WebSocket connection...');
-    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/client');
+    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/' + uuiv7());
 
     ws.onopen = () => {
         logWithTimestamp('log', 'WebSocket Connected');

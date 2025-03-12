@@ -10,3 +10,11 @@ Added transitions for image loading
 Improved numpad size
 Improved Survey Page Layout
 Improved dashboard
+
+0.2.2
+Removed control from ws
+Fixed seats page center aligned (changed to left align)
+increased status font size
+added video player stall detection
+added video player console logs (it's still the weakest link here)
+added randomized websocket connection params

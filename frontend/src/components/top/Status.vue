@@ -119,7 +119,7 @@ watch(websocketService.receivedMessage, (newMessage) => {
     <div class="flex flex-col w-full px-4 items-center justify-between">
       <Transition mode="out-in">
         <div
-          class="flex flex-row items-center justify-between w-full text-2xl font-bold h-[8.75%]"
+          class="flex flex-row items-center justify-between w-full text-3xl font-bold h-[8.75%]"
           :key="currentIndex"
         >
           <div class="flex flex-col items-start justify-start">

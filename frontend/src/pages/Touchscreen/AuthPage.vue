@@ -30,7 +30,7 @@ const logWithTimestamp = (level, message) => {
 
 // Handle student ID input and authentication
 const handleIDInput = async () => {
-  logWithTimestamp("log", "Handling ID input...");
+  logWithTimestamp("log", `Handling ID input for ${studentID.value}`);
   isLoading.value = true;
 
   try {
@@ -166,7 +166,7 @@ onUnmounted(() => {
 
         <Button
           :disabled="
-            studentID == '' || studentID.length < 6
+            studentID == '' || studentID.length < 6 || isLoading
           "
           severity="success"
           :loading="isLoading"
@@ -181,49 +181,7 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- <div class="flex flex-col items-start justify-start gap-2">
-    <div class="grid h-full px-4 gap-2 w-full">
-      <InputGroup>
-        <InputText
-          v-model="studentID"
-          inputId="integeronly"
-          placeholder="輸入學號"
-          fluid
-          inputmode="none"
-          ref="inputRef"
-          variant="outlined"
-        />
-      </InputGroup>
-
-      <div class="grid grid-cols-3 gap-2">
-        <NumButton
-          v-for="number in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
-          :key="number"
-          :number="number"
-          @click="handleButtonClick(number)"
-        />
-
-        <DeleteButton
-          @click="studentID = studentID.slice(0, -1)"
-        />
-
-        <NumButton number="0" @click="handleButtonClick('0')" />
-
-        <Button
-          :disabled="
-            studentID == '' || studentID.length < 6
-          "
-          size="small"
-          severity="success"
-          label="下一步"
-          :loading="isLoading"
-          @click="handleIDInput"
-          @keydown.enter="handleIDInput"
-          icon="pi pi-arrow-right"
-        />
-      </div>
-    </div>
-  </div> -->
+  
 </template>
 <style scoped>
 .p-inputtext {

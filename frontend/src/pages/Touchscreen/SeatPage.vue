@@ -84,7 +84,7 @@ onUnmounted(() => {
     class="flex flex-col items-center justify-start w-full h-full gap-4 p-4 text-2xl"
   >
     <div class="flex flex-row w-full items-center justify-between">
-      <div class="flex flex-row gap-2  items-center">
+      <div class="flex flex-row gap-2 items-center">
         <BackButton />
         <h1 class="text-4xl font-extrabold">今日補位</h1>
       </div>
@@ -103,25 +103,22 @@ onUnmounted(() => {
     </div>
 
     <!-- Seat Selection -->
-    <div>
-      <div class="flex flex-col items-start justify-center gap-2">
-        <div class="flex flex-row gap-2 items-center justify-start">
-          <h3 class="text-2xl shrink-0 font-extrabold">選擇座位：</h3>
-          {{ selectedSeat.座位 }}
-        </div>
 
-        <div class="flex flex-row flex-wrap items-center justify-start gap-4">
-          <Button
-            class="text-xl font-extrabold"
-            size="large"
-            v-for="seatOption in commonStore.seats()"
-            :key="seatOption.號碼"
-            :label="seatOption.座位"
-            @click="selectSeat(seatOption)"
-            :raised="selectedSeat.座位 == seatOption.座位"
-            :variant="selectedSeat.座位 == seatOption.座位 ? '' : 'outlined'"
-          />
-        </div>
+    <div class="flex flex-col items-start justify-start gap-2 w-full">
+      <h3 class="text-2xl shrink-0 font-extrabold">選擇座位：</h3>
+      {{ selectedSeat.座位 }}
+
+      <div class="flex flex-row flex-wrap items-center justify-start gap-4">
+        <Button
+          class="text-xl font-extrabold"
+          size="large"
+          v-for="seatOption in commonStore.seats()"
+          :key="seatOption.號碼"
+          :label="seatOption.座位"
+          @click="selectSeat(seatOption)"
+          :raised="selectedSeat.座位 == seatOption.座位"
+          :variant="selectedSeat.座位 == seatOption.座位 ? '' : 'outlined'"
+        />
       </div>
     </div>
 
