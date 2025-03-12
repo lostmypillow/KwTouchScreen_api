@@ -116,13 +116,13 @@ watch(websocketService.receivedMessage, (newMessage) => {
     </div>
     <!-- time end -->
 
-    <div class="flex flex-col w-full px-4 items-center justify-between">
+    <div class="flex flex-col w-full px-4 items-center justify-between h-full">
       <Transition mode="out-in">
         <div
-          class="flex flex-row items-center justify-between w-full text-4xl font-bold h-[8.75%]"
+          class="flex flex-row items-center justify-between w-full text-5xl font-bold"
           :key="currentIndex"
         >
-          <div class="flex flex-col items-start justify-start">
+          <div class="flex flex-col items-start justify-start pt-4">
             <h3>
               {{
                 classesToday[currentIndex]
@@ -139,7 +139,7 @@ watch(websocketService.receivedMessage, (newMessage) => {
             </h3>
           </div>
 
-          <div class="flex text-5xl font-bold noto-mono">
+          <div class="flex text-7xl font-bold noto-mono">
             {{
               classesToday[currentIndex]
                 ? classesToday[currentIndex].時間
