@@ -18,3 +18,7 @@ increased status font size
 added video player stall detection
 added video player console logs (it's still the weakest link here)
 added randomized websocket connection params
+
+
+0.2.3
+rollback 0.2.2 video player changes
