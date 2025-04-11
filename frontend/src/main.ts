@@ -53,7 +53,7 @@ const routes = [
         component: SurveyPage,
       },
       {
-        path: "/dashboard",
+        path: "dashboard",
         component: DashboardPage,
       },
     ],
