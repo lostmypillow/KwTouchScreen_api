@@ -1,4 +1,39 @@
 @import "tailwindcss";
-:root {
-  font-family: 'Noto Sans TC', Arial, Helvetica, sans-serif;
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: sans-serif;
+    color: #333;
+  }
 }
+@font-face {
+  font-family: "Noto Sans TC";
+  src: url("./assets/fonts/NotoSansTC.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Mono";
+  src: url("./assets/fonts/NotoSansMono.woff2") format("woff2");
+}
+
+:root {
+  font-family: "Noto Sans TC";
+}
+
+.noto-mono {
+  font-family: "Noto Sans Mono";
+}
+html {
+  color-scheme: light;
+}
+
+/* html { overflow: -moz-scrollbars-vertical; overflow-y: scroll; } */
