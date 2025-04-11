@@ -109,7 +109,7 @@ onMounted(() => {
     currentDep.value = "數輔";
     if (
       commonStore.user_data.rateable_employees.filter(
-        (x) => x.主要部門 == currentDep
+        (x) => x.主要部門 == currentDep.value
       ).length == 0
     ) {
       alertStore.setMessage("目前沒有您可評分的數輔老師!");
