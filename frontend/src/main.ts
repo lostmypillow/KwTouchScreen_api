@@ -9,13 +9,6 @@ import {
 import { definePreset } from "@primevue/themes";
 import PrimeVue from "primevue/config";
 import Material from "@primevue/themes/material";
-import Button from "primevue/button";
-import InputText from "primevue/inputtext";
-import Listbox from "primevue/listbox";
-import InputGroup from "primevue/inputgroup";
-import Rating from "primevue/rating";
-import ScrollPanel from "primevue/scrollpanel";
-import ProgressSpinner from "primevue/progressspinner";
 import HomePage from "./pages/Touchscreen/HomePage.vue";
 import AuthPage from "./pages/Touchscreen/AuthPage.vue";
 import SeatPage from "./pages/Touchscreen/SeatPage.vue";
@@ -26,6 +19,7 @@ import App from "./App.vue";
 import ToastService from 'primevue/toastservice';
 import DashboardPage from "./pages/DashboardPage.vue";
 import RootLayout from "./pages/Touchscreen/RootLayout.vue";
+import AwardPage from "./pages/Touchscreen/AwardPage.vue";
 const routes = [
   {
     path: "/",
@@ -56,6 +50,10 @@ const routes = [
         path: "dashboard",
         component: DashboardPage,
       },
+      {
+        path: "awards",
+        component: AwardPage
+      }
     ],
   },
 
@@ -96,5 +94,4 @@ createApp(App)
   })
   .use(autoAnimatePlugin)
   .use(ToastService)
-
   .mount("#app");

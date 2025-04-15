@@ -34,9 +34,10 @@ const handleIDInput = async () => {
   isLoading.value = true;
 
   try {
+    const authType = callbackRoute == 'awards'? 'survey' : callbackRoute
     const authResult = await sendToAPI("/auth/", {
       student_id: studentID.value,
-      type: callbackRoute,
+      type: authType,
     });
     logWithTimestamp(
       "log",

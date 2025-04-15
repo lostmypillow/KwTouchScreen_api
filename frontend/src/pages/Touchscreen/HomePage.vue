@@ -32,7 +32,7 @@ const temporaryRedirect = () => {
       <Button
         class="h-full w-full flex-1 text-center text-[calc(1vw+1em)] break-words"
         rounded
-        @click="temporaryRedirect"
+        @click="router.push('/auth/awards')"
         label="獎學金申請">
         <span class="text-3xl break-words">獎學金申請</span></Button>
     </div>
