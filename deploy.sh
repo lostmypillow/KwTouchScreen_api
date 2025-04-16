@@ -15,7 +15,7 @@ echo ""
 
 
 BACKEND_ENV_FILE="$APP_DIR/src/config.py"
-BACKEND_ENV_EXAMPLE="$APP_DIR/config.py.example"
+BACKEND_ENV_EXAMPLE="$APP_DIR/src/config.py.example"
 
 if [ ! -f "$BACKEND_ENV_FILE" ]; then
     echo "SETUP [Creating backend config.py file...]"
