@@ -1,6 +1,3 @@
-#!/bin/bash
-
-# Exit on error
 set -e
 APP_DIR="$(pwd)/backend"
 SERVICE_NAME="kwtouchscreen"
@@ -43,7 +40,7 @@ fi
 mkdir -p "$PUBLIC_DIR"
 cd "$FRONTEND_DIR"
 rm -rf node_modules
-rm package-lock.json
+rm -f package-lock.json
 npm install >/dev/null 2>&1
 npm run build >/dev/null 2>&1
 
