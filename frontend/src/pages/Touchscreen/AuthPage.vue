@@ -64,9 +64,12 @@ const handleIDInput = async () => {
 
     if (callbackRoute == "awards") {
       commonStore.courses = await getApplicableAwards(commonStore.user_data.學號);
+      console.log(commonStore.courses)
       if (commonStore.courses == [] || commonStore.courses == "error") {
+        console.log('e')
         alertStore.setMessage("目前沒有您可申請的獎學金");
         router.push("/alert");
+        return;
       }
     }
 

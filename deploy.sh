@@ -7,9 +7,6 @@ SERVICE_NAME="kwtouchscreen"
 PORT="8002"
 
 VERSION=$(python3 sync_version.py)
-echo "KwTouchScreen v$VERSION SETUP STARTING..."
-echo "Done."
-echo ""
 echo "KwTouchScreen API DEPLOY SCRIPT FOR v$VERSION STARTING..."
 echo ""
 
