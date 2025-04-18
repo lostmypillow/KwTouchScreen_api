@@ -45,7 +45,8 @@ fi
 
 mkdir -p "$PUBLIC_DIR"
 cd "$FRONTEND_DIR"
-
+rm -rf node_modules
+rm package-lock.json
 npm install >/dev/null 2>&1
 npm run build >/dev/null 2>&1
 

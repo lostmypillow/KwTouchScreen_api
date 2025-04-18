@@ -12,18 +12,18 @@ export const getApplicableAwards = async (studentId) => {
     };
 
     const uuidResp = await axios.get(
-      `https://studev.kaowei.tw/api/user?search_value=${studentId}`,
+      `https://stulearning.kaowei.tw/api/user?search_value=${studentId}`,
       { headers }
     );
 
     const userUuid = uuidResp.data.data[0].user_uuid;
 
     const applicableResp = await axios.get(
-      `https://studev.kaowei.tw/api/scholarship/apply/applicable?user_uuid=${userUuid}`,
+      `https://stulearning.kaowei.tw/api/scholarship/apply/applicable?user_uuid=${userUuid}`,
       { headers }
     );
     const appliedResp = await axios.get(
-      `https://studev.kaowei.tw/api/scholarship/apply/applied?user_uuid=${userUuid}`,
+      `https://stulearning.kaowei.tw/api/scholarship/apply/applied?user_uuid=${userUuid}`,
       { headers }
     );
     console.log(`look here:`)

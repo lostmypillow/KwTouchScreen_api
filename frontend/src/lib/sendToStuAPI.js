@@ -18,7 +18,7 @@ export async function sendToStuAPI(data) {
     );
 
     const res = await axios.post(
-      "https://studev.kaowei.tw/api/scholarship/apply/",
+      "https://stulearning.kaowei.tw/api/scholarship/apply/",
       data,
       { headers }
     );
