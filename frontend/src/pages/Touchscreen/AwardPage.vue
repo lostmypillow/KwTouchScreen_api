@@ -7,15 +7,17 @@ import Numpad from "../../components/Numpad.vue";
 import { sendToStuAPI } from "../../lib/sendToStuAPI";
 import { alertStore } from "../../store/alertStore";
 import { useRouter } from "vue-router";
+import Countdown from "../../lib/Countdown";
 const router = useRouter();
 const selectedCourse = ref();
-const courses = ref();
 const score = ref("");
 const ranking = ref("");
 const isLoading = ref(false);
-const dummySubmit = () => {
-  console.log(score.value);
-};
+const countdown = new Countdown(30, () => {
+  commonStore.clear();
+  router.push("/home");
+});
+const dummySubmit = () => console.log(score.value);
 
 const callAPI = async () => {
   try {
@@ -30,8 +32,17 @@ const callAPI = async () => {
 
       score: score.value,
     });
-    alertStore.setMessage(stuResult.code != 200 ? "發生錯誤" : "申請完成!");
-    router.push("/alert");
+    if (stuResult.code != 200) {
+      console.log("stuResult not 200!");
+      console.log(stuResult);
+      if (stuResult.data.detail == "scholarship apply already exists") {
+        alertStore.setMessage("抱歉，此獎學金已申請過!");
+      }
+      router.push("/alert");
+    } else {
+      alertStore.setMessage("申請完成!");
+      router.push("/alert");
+    }
   } catch (error) {
     console.error(error);
     alertStore.setMessage("系統錯誤，請稍後再試");
@@ -39,13 +50,11 @@ const callAPI = async () => {
   }
 };
 onMounted(async () => {
-  courses.value = await getApplicableAwards(commonStore.user_data.學號);
-  console.log(courses.value);
-  if (courses.value == [] || courses.value == "error") {
-    alertStore.setMessage("目前沒有您可申請的獎學金");
-    router.push("/alert");
-  }
+  countdown.start();
+ 
 });
+
+onUnmounted(() => countdown.stop());
 </script>
 
 <template>
@@ -79,11 +88,12 @@ onMounted(async () => {
             >
               <Select
                 v-model="selectedCourse"
-                :options="courses"
+                :options="commonStore.courses"
                 optionLabel="class_name"
                 placeholder="請選擇班級"
                 class="w-full md:w-56"
                 checkmark
+                @focus="countdown.reset()"
               >
                 <template #option="slotProps">
                   <div class="flex items-center">
@@ -91,7 +101,7 @@ onMounted(async () => {
                     <span class="font-bold text-blue-600">{{
                       slotProps.option.class_name
                     }}</span>
-                    <span class="ml-2 text-gray-400"
+                    <span class="ml-2 text-green-600"
                       >$ {{ slotProps.option.money }}</span
                     >
                     <span class="ml-2">
@@ -110,7 +120,7 @@ onMounted(async () => {
               :disabled="selectedCourse == null"
               icon="pi pi-arrow-right"
               iconPos="right"
-              @click="activateCallback('2')"
+              @click="activateCallback('2') && countdown.reset()"
             />
           </div>
         </StepPanel>
@@ -121,7 +131,7 @@ onMounted(async () => {
             >
               <InputGroup class="py-4">
                 <InputText
-                  :pt="{ root: { class: 'text-2xl' } }"
+                  :pt="{ root: { class: 'text-4xl' } }"
                   v-model="score"
                   inputId="integeronly"
                   placeholder="排名"
@@ -139,7 +149,7 @@ onMounted(async () => {
                 :isLoading="isLoading"
                 :minLength="6"
                 buttonLabel="登入"
-                @submit="dummySubmit"
+                @pressed="countdown.reset()"
               />
             </div>
           </div>
@@ -148,14 +158,14 @@ onMounted(async () => {
               label="上一步"
               severity="secondary"
               icon="pi pi-arrow-left"
-              @click="activateCallback('1')"
+              @click="activateCallback('1') && countdown.reset()"
             />
             <Button
               label="下一步"
               :disabled="score == ''"
               icon="pi pi-arrow-right"
               iconPos="right"
-              @click="activateCallback('3')"
+              @click="activateCallback('3') && countdown.reset()"
             />
           </div>
         </StepPanel>
@@ -193,14 +203,14 @@ onMounted(async () => {
               label="上一步"
               severity="secondary"
               icon="pi pi-arrow-left"
-              @click="activateCallback('2')"
+              @click="activateCallback('2') && countdown.reset()"
             />
             <Button
               label="下一步"
               :disabled="ranking == ''"
               icon="pi pi-arrow-right"
               iconPos="right"
-              @click="activateCallback('4')"
+              @click="activateCallback('4') && countdown.reset()"
             />
           </div>
         </StepPanel>
@@ -213,7 +223,8 @@ onMounted(async () => {
                 <p>學號: {{ commonStore.user_data.學號 }}</p>
                 <p>姓名: {{ commonStore.user_data.姓名 }}</p>
                 <p>
-                  班級名稱: {{ selectedCourse ? selectedCourse.class_name : "" }}
+                  班級名稱:
+                  {{ selectedCourse ? selectedCourse.class_name : "" }}
                 </p>
 
                 <p>分數: {{ score }}</p>
@@ -227,7 +238,7 @@ onMounted(async () => {
               label="上一步"
               severity="secondary"
               icon="pi pi-arrow-left"
-              @click="activateCallback('3')"
+              @click="activateCallback('3') && countdown.reset()"
             />
             <Button
               severity="success"
@@ -241,3 +252,8 @@ onMounted(async () => {
     </Stepper>
   </div>
 </template>
+<style scoped>
+.p-inputtext {
+  font-size: 2rem;
+}
+</style>

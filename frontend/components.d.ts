@@ -32,6 +32,5 @@ declare module 'vue' {
     Stepper: typeof import('primevue/stepper')['default']
     Toast: typeof import('primevue/toast')['default']
     VideoPlayer: typeof import('./src/components/bottom/VideoPlayer.vue')['default']
-    VirtualScroller: typeof import('primevue/virtualscroller')['default']
   }
 }

@@ -22,8 +22,15 @@ export const getApplicableAwards = async (studentId) => {
       `https://studev.kaowei.tw/api/scholarship/apply/applicable?user_uuid=${userUuid}`,
       { headers }
     );
+    const appliedResp = await axios.get(
+      `https://studev.kaowei.tw/api/scholarship/apply/applied?user_uuid=${userUuid}`,
+      { headers }
+    );
+    console.log(`look here:`)
+    console.log(appliedResp.data.data
+    )
 
-    console.log(applicableResp.data.data);
+    // console.log(applicableResp.data.data);
     return applicableResp.data.data;
   } catch (error) {
     console.error(error);

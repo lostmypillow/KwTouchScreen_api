@@ -21,10 +21,12 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "submit"]);
+const emit = defineEmits(["update:modelValue", "submit", "pressed"]);
 
 const handleButtonClick = (number) => {
   emit("update:modelValue", props.modelValue + number);
+  emit("pressed")
+
 };
 
 const handleDelete = () => {

@@ -10,12 +10,6 @@ const mathRoute = () => {
   router.push("/auth/survey");
 };
 
-const temporaryRedirect = () => {
-  alertStore.setMessage("未開放功能");
-  router.push("/alert");
-};
-
-
 </script>
 <template>
   <div class="pt-4 grid grid-rows-2 grid-cols-2 w-full h-full">

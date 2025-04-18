@@ -11,11 +11,12 @@ import { commonStore } from "../../store/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
 import { InputText, InputGroup } from "primevue";
 import BackButton from "../../components/buttons/BackButton.vue";
+import { getApplicableAwards } from "../../lib/getApplicableAwards";
 // Define props and router
 const route = useRoute();
 const router = useRouter();
 const callbackRoute = route.params.callback;
-const studentID = ref('')
+const studentID = ref("");
 const isLoading = ref(false);
 const countdown = new Countdown(30, () => {
   commonStore.clear();
@@ -34,7 +35,7 @@ const handleIDInput = async () => {
   isLoading.value = true;
 
   try {
-    const authType = callbackRoute == 'awards'? 'survey' : callbackRoute
+    const authType = callbackRoute;
     const authResult = await sendToAPI("/auth/", {
       student_id: studentID.value,
       type: authType,
@@ -49,7 +50,7 @@ const handleIDInput = async () => {
         "warn",
         `Authentication failed: ${authResult.data.detail || "發生錯誤"}`
       );
-   
+
       alertStore.setMessage(authResult.data.detail || "發生錯誤");
       router.push("/alert");
       return;
@@ -60,6 +61,14 @@ const handleIDInput = async () => {
       "log",
       `User data: ${JSON.stringify(commonStore.user_data)}`
     );
+
+    if (callbackRoute == "awards") {
+      commonStore.courses = await getApplicableAwards(commonStore.user_data.學號);
+      if (commonStore.courses == [] || commonStore.courses == "error") {
+        alertStore.setMessage("目前沒有您可申請的獎學金");
+        router.push("/alert");
+      }
+    }
 
     router.push(`/${callbackRoute}`);
   } catch (error) {
@@ -132,7 +141,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="flex flex-col px-4 gap-2 w-full ">
+    <div class="flex flex-col px-4 gap-2 w-full">
       <InputGroup class="py-4">
         <InputText
           :pt="{ root: { class: 'text-2xl' } }"
@@ -166,9 +175,7 @@ onUnmounted(() => {
         />
 
         <Button
-          :disabled="
-            studentID == '' || studentID.length < 6 || isLoading
-          "
+          :disabled="studentID == '' || studentID.length < 6 || isLoading"
           severity="success"
           :loading="isLoading"
           @click="handleIDInput"
@@ -181,8 +188,6 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
-
-  
 </template>
 <style scoped>
 .p-inputtext {
