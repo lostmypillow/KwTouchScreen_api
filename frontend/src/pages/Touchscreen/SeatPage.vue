@@ -7,7 +7,7 @@ import Countdown from "../../lib/Countdown";
 import { commonStore } from "../../store/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
 import Button from "primevue/button";
-
+import BackButton from '../../components/buttons/BackButton.vue';
 const router = useRouter();
 const selectedSeat = ref("");
 const isLoading = ref(false);

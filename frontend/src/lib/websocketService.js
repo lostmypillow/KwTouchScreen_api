@@ -35,7 +35,6 @@ const initializeWebSocket = () => {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            logWithTimestamp('log', `Received message: ${JSON.stringify(data)}`);
             receivedMessage.value = data;
         } catch (error) {
             logWithTimestamp('error', `Error parsing message: ${error}`);

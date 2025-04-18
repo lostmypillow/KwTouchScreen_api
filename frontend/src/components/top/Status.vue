@@ -43,11 +43,7 @@ const startAlternatingClass = () => {
   if (classesToday.value.length > 0) {
     classInterval = setInterval(() => {
       currentIndex.value = (currentIndex.value + 1) % classesToday.value.length;
-      console.log(
-        `[Status.vue] [${new Date().toISOString()}] startAlternatingClass: currentIndex updated to ${
-          currentIndex.value
-        }`
-      );
+      
     }, 5000);
   }
 };
@@ -82,11 +78,7 @@ watch(
 );
 
 watch(websocketService.receivedMessage, (newMessage) => {
-  console.log(
-    `[Status.vue] [${new Date().toISOString()}] watch: receivedMessage updated with newMessage: ${JSON.stringify(
-      newMessage
-    )}`
-  );
+
   if (newMessage.action == "update class") {
     classesToday.value = newMessage.message.classes_today;
     classWithSeat.value = newMessage.message.class_with_seats;
@@ -96,11 +88,6 @@ watch(websocketService.receivedMessage, (newMessage) => {
     commonStore.today_class_4_display = classWithSeat.value.班級名稱;
     commonStore.male_seats = classWithSeat.value.男座位;
     commonStore.female_seats = classWithSeat.value.女座位;
-    console.log(
-      `[Status.vue] [${new Date().toISOString()}] Class and seat info updated in commonStore: ${JSON.stringify(
-        commonStore
-      )}`
-    );
   }
 });
 </script>

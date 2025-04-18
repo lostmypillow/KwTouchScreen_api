@@ -7,15 +7,12 @@ SERVICE_NAME="kwtouchscreen"
 PORT="8002"
 
 VERSION=$(python3 sync_version.py)
-echo "KwTouchScreen v$VERSION SETUP STARTING..."
-echo "Done."
-echo ""
 echo "KwTouchScreen API DEPLOY SCRIPT FOR v$VERSION STARTING..."
 echo ""
 
 
 BACKEND_ENV_FILE="$APP_DIR/src/config.py"
-BACKEND_ENV_EXAMPLE="$APP_DIR/config.py.example"
+BACKEND_ENV_EXAMPLE="$APP_DIR/src/config.py.example"
 
 if [ ! -f "$BACKEND_ENV_FILE" ]; then
     echo "SETUP [Creating backend config.py file...]"
@@ -45,7 +42,8 @@ fi
 
 mkdir -p "$PUBLIC_DIR"
 cd "$FRONTEND_DIR"
-
+rm -rf node_modules
+rm package-lock.json
 npm install >/dev/null 2>&1
 npm run build >/dev/null 2>&1
 

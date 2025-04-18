@@ -7,6 +7,7 @@ export const commonStore = reactive({
   female_seats: [],
   user_data: {},
   is_math_rate: false,
+  courses: [],
   clear() {
     this.is_math_rate = false;
     this.user_data = {};

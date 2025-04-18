@@ -136,7 +136,7 @@ const sendSurveyResult = async () => {
     `[SurveyPage.vue] [${new Date().toISOString()}] isLoading set to true`
   );
   try {
-    const surveyResult = await sendToAPI("/rate/", {
+    const surveyResult = await sendToAPI("/survey/", {
       employee_id: currentEmp.value.學號,
       employee_dep: currentEmp.value.主要部門,
       student_id: commonStore.user_data.學號,
