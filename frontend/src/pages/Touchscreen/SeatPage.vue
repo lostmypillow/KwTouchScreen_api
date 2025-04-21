@@ -2,55 +2,70 @@
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { alertStore } from "../../store/alertStore";
-import { useRoute } from "vue-router";
-import Countdown from "../../lib/Countdown";
 import { commonStore } from "../../store/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
+import websocketService from "../../lib/websocketService";
+import Countdown from "../../lib/Countdown";
 import Button from "primevue/button";
-import BackButton from '../../components/buttons/BackButton.vue';
+import BackButton from "../../components/buttons/BackButton.vue";
+
 const router = useRouter();
 const selectedSeat = ref("");
 const isLoading = ref(false);
+
+// Helper for consistent error reporting
+const reportError = (prefix, err) => {
+  websocketService.sendMessage(
+    "client_error",
+    `${prefix}: ${typeof err === "string" ? err : JSON.stringify(err)}`
+  );
+};
+
 const countdown = new Countdown(30, () => {
-  commonStore.clear();
-  router.push("/home");
+  try {
+    commonStore.clear();
+    router.push("/home");
+  } catch (err) {
+    reportError("Countdown callback error", err);
+  }
 });
 
 const selectSeat = (seat) => {
-  console.log(
-    `[SeatPage.vue] [${new Date().toISOString()}] Selected Seat: ${seat}`
-  );
-  selectedSeat.value = seat;
-};
-
-const resetSeat = () => {
-  console.log(
-    `[SeatPage.vue] [${new Date().toISOString()}] Resetting seat selection.`
-  );
-  selectedSeat.value = "";
+  try {
+    selectedSeat.value = seat;
+  } catch (err) {
+    reportError("selectSeat error", err);
+  }
 };
 
 const handleSubmit = async () => {
-  console.log(
-    `[SeatPage.vue] [${new Date().toISOString()}] Handling submit...`
-  );
   isLoading.value = true;
+
+  if (!commonStore.user_data || !selectedSeat.value) {
+    reportError("handleSubmit pre-check", "Missing user_data or selectedSeat");
+    alertStore.setMessage("資料不完整，請重新操作");
+    router.push("/alert");
+    isLoading.value = false;
+    return;
+  }
+
   try {
     const seatResult = await sendToAPI("/seat/", {
       學號: commonStore.user_data.學號,
       號碼: selectedSeat.value.號碼,
     });
-    console.log(
-      `[SeatPage.vue] [${new Date().toISOString()}] seatResult: ${JSON.stringify(
-        seatResult
-      )}`
+
+    websocketService.sendMessage(
+      "client_action",
+      `[SeatPage.vue] seatResult: ${JSON.stringify(seatResult)}`
     );
-    alertStore.setMessage(seatResult.code != 200 ? "發生錯誤" : "選擇完成!");
+
+    alertStore.setMessage(
+      seatResult.code != 200 ? "發生錯誤" : "選擇完成!"
+    );
     router.push("/alert");
   } catch (error) {
-    console.error(
-      `[SeatPage.vue] [${new Date().toISOString()}] Error during seat submission: ${error}`
-    );
+    reportError("Error during seat submission", error);
     alertStore.setMessage("系統錯誤，請稍後再試");
     router.push("/alert");
   } finally {
@@ -59,25 +74,30 @@ const handleSubmit = async () => {
 };
 
 onMounted(() => {
-  console.log(
-    `[SeatPage.vue] [${new Date().toISOString()}] Mounted and starting countdown...`
-  );
-  countdown.start();
-  watch([selectedSeat], () => {
-    console.log(
-      `[SeatPage.vue] [${new Date().toISOString()}] Seat selection changed, resetting countdown...`
-    );
-    countdown.reset();
-  });
+  try {
+    countdown.start();
+
+    watch([selectedSeat], () => {
+      websocketService.sendMessage(
+        "client_action",
+        "Seat selection changed, resetting countdown"
+      );
+      countdown.reset();
+    });
+  } catch (err) {
+    reportError("onMounted error", err);
+  }
 });
 
 onUnmounted(() => {
-  console.log(
-    `[SeatPage.vue] [${new Date().toISOString()}] Unmounted and stopping countdown...`
-  );
-  countdown.stop();
+  try {
+    countdown.stop();
+  } catch (err) {
+    reportError("onUnmounted error", err);
+  }
 });
 </script>
+
 
 <template>
   <div

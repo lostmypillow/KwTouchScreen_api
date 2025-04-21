@@ -17,17 +17,14 @@ export default defineConfig({
     outDir: "../backend/public", // Output to backend/public
     emptyOutDir: true, // Delete existing files before building
   },
-  // server: {
-  //   proxy: {
-  //     "/ws": {
-  //       target: "http://localhost:8000",
-  //       ws: true, // Enable WebSocket proxying
-  //       changeOrigin: true,
-  //     },
-  //     "/video/": {
-  //       target: "http://localhost:8000",
-  //       changeOrigin: true,
-  //     },
-  //   },
-  // },
+  server: {
+    proxy: {
+      "/ws": {
+        target: "http://localhost:8000",
+        ws: true, // Enable WebSocket proxying
+        changeOrigin: true,
+      },
+      
+    },
+  },
 });

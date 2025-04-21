@@ -12,6 +12,7 @@ import { sendToAPI } from "../../lib/sendToAPI";
 import { InputText, InputGroup } from "primevue";
 import BackButton from "../../components/buttons/BackButton.vue";
 import { getApplicableAwards } from "../../lib/getApplicableAwards";
+import websocketService from "../../lib/websocketService";
 // Define props and router
 const route = useRoute();
 const router = useRouter();
@@ -23,16 +24,13 @@ const countdown = new Countdown(30, () => {
   router.push("/home");
 });
 
-// Helper function to log messages with a timestamp and origin
-const logWithTimestamp = (level, message) => {
-  const timestamp = new Date().toISOString();
-  console[level](`[AuthPage.vue] [${timestamp}] ${message}`);
-};
-
-// Handle student ID input and authentication
 const handleIDInput = async () => {
-  logWithTimestamp("log", `Handling ID input for ${studentID.value}`);
+  websocketService.sendMessage(
+    "client_action",
+    `AuthPage.vue Handling ID input for ${studentID.value}`
+  );
   isLoading.value = true;
+  let defaultError = "發生錯誤";
 
   try {
     const authType = callbackRoute;
@@ -40,33 +38,54 @@ const handleIDInput = async () => {
       student_id: studentID.value,
       type: authType,
     });
-    logWithTimestamp(
-      "log",
-      `Authentication result: ${JSON.stringify(authResult)}`
-    );
+    if (studentID.value.length > 6) {
+      defaultError += "\n: 學號打太長了嗎?";
+    }
 
     if (authResult.code != 200) {
-      logWithTimestamp(
-        "warn",
-        `Authentication failed: ${authResult.data.detail || "發生錯誤"}`
+      websocketService.sendMessage(
+        "client_error",
+        `AuthPage.vue ${studentID.value} Authentication failed: ${
+          JSON.stringify(authResult.data.detail) || "發生錯誤"
+        }`
       );
 
-      alertStore.setMessage(authResult.data.detail || "發生錯誤");
+      alertStore.setMessage(
+        typeof authResult?.data?.detail === "string"
+          ? authResult.data.detail
+          : defaultError
+      );
+
       router.push("/alert");
       return;
     }
 
     commonStore.user_data = authResult.data;
-    logWithTimestamp(
-      "log",
-      `User data: ${JSON.stringify(commonStore.user_data)}`
-    );
 
     if (callbackRoute == "awards") {
-      commonStore.courses = await getApplicableAwards(commonStore.user_data.學號);
-      console.log(commonStore.courses)
-      if (commonStore.courses == [] || commonStore.courses == "error") {
-        console.log('e')
+      try {
+        commonStore.courses = await getApplicableAwards(
+          commonStore.user_data.學號
+        );
+      } catch (err) {
+        websocketService.sendMessage(
+          "client_error",
+          `AuthPage.vue ${studentID.value}  getApplicableAwards error: ${JSON.stringify(err)}`
+        );
+        alertStore.setMessage("獲取獎學金資料時發生錯誤");
+        router.push("/alert");
+        return;
+      }
+
+      if (
+        !commonStore.courses ||
+        commonStore.courses.length === 0 ||
+        commonStore.courses === "error"
+      ) {
+        websocketService.sendMessage(
+          "client_error",
+          `AuthPage.vue ${studentID.value}  No applicable awards found or invalid response for: ${commonStore.user_data.學號}`
+        );
         alertStore.setMessage("目前沒有您可申請的獎學金");
         router.push("/alert");
         return;
@@ -75,9 +94,16 @@ const handleIDInput = async () => {
 
     router.push(`/${callbackRoute}`);
   } catch (error) {
-    logWithTimestamp("error", `Error during authentication: ${error}`);
-    alertStore.setMessage("系統錯誤，請稍後再試");
+    if (studentID.value.length > 6) {
+      defaultError += "\n提示: 學號打太長了嗎?";
+    }
+    websocketService.sendMessage(
+      "client_error",
+      `AuthPage.vue ${studentID.value}  Error during authentication: ${error}`
+    );
+    alertStore.setMessage(defaultError);
     router.push("/alert");
+    return;
   } finally {
     isLoading.value = false;
   }
@@ -85,54 +111,63 @@ const handleIDInput = async () => {
 
 // Handle button click for entering student ID
 const handleButtonClick = (number) => {
-  logWithTimestamp("log", `Button clicked: ${number}`);
   studentID.value += number;
   countdown.reset();
 };
 
 // Component mounted logic
 onMounted(() => {
-  logWithTimestamp(
-    "log",
-    `Component mounted, callback route: ${callbackRoute}`
-  );
+  try {
+    nextTick(() => {
+      const inputElement = document.querySelector(".p-inputtext");
+      if (inputElement) {
+        inputElement.focus();
+      }
+    });
 
-  nextTick(() => {
-    const inputElement = document.querySelector(".p-inputtext");
-    if (inputElement) {
-      inputElement.focus();
-      logWithTimestamp("log", "Input focused.");
+    if (commonStore.today_class_4_auth == "" && callbackRoute == "seats") {
+      alertStore.setMessage("目前沒有您可選的補位資料");
+      router.push("/alert");
     }
-  });
 
-  if (commonStore.today_class_4_auth == "" && callbackRoute == "seats") {
-    logWithTimestamp("log", "Condition met for redirecting to alert.");
-    alertStore.setMessage("目前沒有您可選的補位資料");
-    router.push("/alert");
+    countdown.start();
+
+    const keydownHandler = async (e) => {
+      try {
+        countdown.reset();
+        if (e.key === "Enter") {
+          e.stopPropagation();
+          e.preventDefault();
+          window.removeEventListener("keydown", keydownHandler);
+          countdown.stop();
+          await handleIDInput();
+        }
+      } catch (err) {
+        websocketService.sendMessage(
+          "client_error",
+          `AuthPage.vue keydownHandler error: ${err}`
+        );
+      }
+    };
+
+    window.addEventListener("keydown", keydownHandler);
+  } catch (err) {
+    websocketService.sendMessage(
+      "client_error",
+      `AuthPage.vue onMounted error: ${err}`
+    );
   }
-
-  countdown.start();
-
-  const keydownHandler = async (e) => {
-    countdown.reset();
-    if (e.key === "Enter") {
-      logWithTimestamp("log", `Enter key pressed: ${e.key}`);
-      e.stopPropagation();
-      e.preventDefault();
-      window.removeEventListener("keydown", keydownHandler);
-      countdown.stop();
-      await handleIDInput();
-    }
-  };
-
-  window.addEventListener("keydown", keydownHandler);
 });
 
 // Component unmounted logic
 onUnmounted(() => {
-  logWithTimestamp("log", "Component unmounted, stopping countdown...");
-  countdown.stop();
+  try {
+    countdown.stop();
+  } catch (err) {
+    websocketService.sendMessage("client_error", `AuthPage.vue onUnmounted error: ${JSON.stringify(err)}`);
+  }
 });
+
 </script>
 
 <template>
@@ -155,7 +190,8 @@ onUnmounted(() => {
           inputmode="none"
           ref="inputRef"
           variant="outlined"
-        /><DeleteButton
+        />
+        <DeleteButton
           class="text-center"
           @click="studentID = studentID.slice(0, -1)"
         />
@@ -186,8 +222,8 @@ onUnmounted(() => {
           icon="pi pi-arrow-right"
           class="flex-1 min-w-[30%] max-w-[32%] text-center"
         >
-          <span class="text-2xl font-extra-bold">登入</span></Button
-        >
+          <span class="text-2xl font-extra-bold"> 登入 </span>
+        </Button>
       </div>
     </div>
   </div>

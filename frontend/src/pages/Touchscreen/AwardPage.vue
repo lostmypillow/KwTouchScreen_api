@@ -1,6 +1,5 @@
 <script setup>
 import BackButton from "../../components/buttons/BackButton.vue";
-import { getApplicableAwards } from "../../lib/getApplicableAwards";
 import { commonStore } from "../../store/commonStore";
 import { ref, onMounted, onUnmounted } from "vue";
 import Numpad from "../../components/Numpad.vue";
@@ -8,6 +7,7 @@ import { sendToStuAPI } from "../../lib/sendToStuAPI";
 import { alertStore } from "../../store/alertStore";
 import { useRouter } from "vue-router";
 import Countdown from "../../lib/Countdown";
+import websocketService from "../../lib/websocketService";
 const router = useRouter();
 const selectedCourse = ref();
 const score = ref("");
@@ -20,23 +20,34 @@ const countdown = new Countdown(30, () => {
 const dummySubmit = () => console.log(score.value);
 
 const callAPI = async () => {
+  if (!selectedCourse.value || !commonStore.user_data) {
+    websocketService.sendMessage(
+      "client_error",
+      "AwardPage.vue callAPI validation failed: selectedCourse or user_data is undefined"
+    );
+    alertStore.setMessage("資料不完整，請重新操作");
+    router.push("/alert");
+    return;
+  }
+
   try {
     const stuResult = await sendToStuAPI({
       student_id: commonStore.user_data.學號,
-
       scholarshipItem_id: selectedCourse.value.ssi_id,
-
       class_id: selectedCourse.value.class_id,
-
       scholarship_rank: ranking.value,
-
       score: score.value,
     });
+
     if (stuResult.code != 200) {
-      console.log("stuResult not 200!");
-      console.log(stuResult);
+      websocketService.sendMessage(
+        "client_error",
+        `Scholarship submit failed: ${JSON.stringify(stuResult)}`
+      );
       if (stuResult.data.detail == "scholarship apply already exists") {
         alertStore.setMessage("抱歉，此獎學金已申請過!");
+      } else {
+        alertStore.setMessage("申請失敗，請稍後再試");
       }
       router.push("/alert");
     } else {
@@ -44,17 +55,49 @@ const callAPI = async () => {
       router.push("/alert");
     }
   } catch (error) {
+    websocketService.sendMessage(
+      "client_error",
+      `AwardPage.vue Exception in callAPI: ${JSON.stringify(error)}`
+    );
     console.error(error);
     alertStore.setMessage("系統錯誤，請稍後再試");
     router.push("/alert");
   }
 };
+
+const safeDate = (dateStr) => {
+  try {
+    return dateStr?.split(" ")[0] || "";
+  } catch (err) {
+    websocketService.sendMessage(
+      "client_error",
+      `AwardPage.vue Invalid date format: ${dateStr}`
+    );
+    return "";
+  }
+};
+
 onMounted(async () => {
-  countdown.start();
- 
+  try {
+    countdown.start();
+  } catch (err) {
+    websocketService.sendMessage(
+      "client_error",
+      `AwardPage.vue onMounted error: ${JSON.stringify(err)}`
+    );
+  }
 });
 
-onUnmounted(() => countdown.stop());
+onUnmounted(() => {
+  try {
+    countdown.stop();
+  } catch (err) {
+    websocketService.sendMessage(
+      "client_error",
+      `AwardPage.vue onUnmounted error: ${JSON.stringify(err)}`
+    );
+  }
+});
 </script>
 
 <template>
@@ -105,8 +148,8 @@ onUnmounted(() => countdown.stop());
                       >$ {{ slotProps.option.money }}</span
                     >
                     <span class="ml-2">
-                      {{ slotProps.option.start_time.split(" ")[0] }} ~{{
-                        slotProps.option.end_time.split(" ")[0]
+                      {{ safeDate(slotProps.option.start_time) }} ~{{
+                        safeDate(slotProps.option.end_time)
                       }}
                     </span>
                   </div>

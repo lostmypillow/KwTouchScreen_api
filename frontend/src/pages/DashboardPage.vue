@@ -1,22 +1,32 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
+import websocketService from "../lib/websocketService";
+
 const toast = useToast();
 
-// VIDEO logic
 const videoList = ref(["No files present on disk"]);
 const selectedVideo = ref("");
 const isUploading = ref(false);
 const isDeleting = ref(false);
+const connectedToServer = ref(false);
 
-// Retry logic helper function
+// Log or report all error strings
+const reportError = (label, error) => {
+  websocketService.sendMessage(
+    "client_error",
+    `${label}: ${typeof error === "string" ? error : JSON.stringify(error)}`
+  );
+};
+
+// Retry logic
 const retryRequest = async (fn, retries = 3, delay = 2000) => {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error);
+      reportError(`Attempt ${i + 1} failed`, error);
       if (i < retries - 1) await new Promise((res) => setTimeout(res, delay));
     }
   }
@@ -26,15 +36,22 @@ const retryRequest = async (fn, retries = 3, delay = 2000) => {
 const getVideoList = async () => {
   try {
     videoList.value = await retryRequest(async () => {
-      return (await axios.get(`http://${import.meta.env.VITE_VIDEO_URL}/all/`)).data;
+      return (
+        await axios.get(
+          `http://${import.meta.env.VITE_VIDEO_URL}/all/`
+        )
+      ).data;
     });
+
     toast.add({
       severity: "success",
       summary: "Fetch Successful",
       detail: "Video list updated",
       life: 3000,
     });
+    websocketService.sendMessage("client_action", "Video list fetched successfully");
   } catch (error) {
+    reportError("Fetch video list failed", error);
     toast.add({
       severity: "error",
       summary: "Fetch Failed",
@@ -54,17 +71,25 @@ const onFileSelect = async (event) => {
 
   try {
     await retryRequest(() =>
-      axios.post(`http://${import.meta.env.VITE_VIDEO_URL}/upload/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
+      axios.post(
+        `http://${import.meta.env.VITE_VIDEO_URL}/upload/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      )
     );
+
     toast.add({
       severity: "success",
       summary: "Upload Complete",
       detail: "File upload done",
       life: 3000,
     });
+    websocketService.sendMessage("client_action", `Video uploaded: ${file.name}`);
+    await getVideoList();
   } catch (error) {
+    reportError("Upload video failed", error);
     toast.add({
       severity: "error",
       summary: "Upload Failed",
@@ -81,14 +106,22 @@ const deleteVid = async () => {
   const f = selectedVideo.value.toString();
 
   try {
-    await retryRequest(() => axios.delete(`http://${import.meta.env.VITE_VIDEO_URL}/video/${f}`));
+    await retryRequest(() =>
+      axios.delete(
+        `http://${import.meta.env.VITE_VIDEO_URL}/video/${f}`
+      )
+    );
+
     toast.add({
       severity: "success",
       summary: "Deletion Complete",
       detail: "File deleted",
       life: 3000,
     });
+    websocketService.sendMessage("client_action", `Video deleted: ${f}`);
+    await getVideoList();
   } catch (error) {
+    reportError("Delete video failed", error);
     toast.add({
       severity: "error",
       summary: "Deletion Failed",
@@ -100,51 +133,25 @@ const deleteVid = async () => {
     selectedVideo.value = "";
   }
 };
-// VIDEO logic end
-
-const connectedToServer = ref(false);
-const ws = ref(null);
-
-const initWs = () => {
-  const connectWebSocket = () => {
-    ws.value = new WebSocket(`ws://${import.meta.env.VITE_SERVER_URL}/ws/control`);
-    console.log(`Attempting WebSocket connection...`);
-
-    ws.value.onopen = () => {
-      console.log("WebSocket connected");
-      connectedToServer.value = true;
-    };
-
-    ws.value.onmessage = (event) => {
-      console.log("Message received", event.data);
-    };
-
-    ws.value.onerror = (error) => {
-      console.error("WebSocket error: ", error);
-      connectedToServer.value = false;
-      ws.value.close();
-    };
-
-    ws.value.onclose = () => {
-      console.log("WebSocket disconnected, retrying in 3s...");
-      connectedToServer.value = false;
-      setTimeout(connectWebSocket, 3000);
-    };
-  };
-
-  connectWebSocket();
-};
 
 onMounted(async () => {
-  initWs();
+  websocketService.initializeWebSocket();
+
+  // Watch WebSocket connection status based on message reception
+  watch(
+    () => websocketService.receivedMessage.value,
+    (msg) => {
+      if (msg?.action === "pong" || msg?.from?.includes("server")) {
+        connectedToServer.value = true;
+      }
+    }
+  );
+
   await getVideoList();
 });
 
 onUnmounted(() => {
-  if (ws.value) {
-    ws.value.close();
-    console.log("WebSocket closed on unmount");
-  }
+  connectedToServer.value = false;
 });
 </script>
 
@@ -171,7 +178,7 @@ onUnmounted(() => {
           </template>
           <template #footer>
             <Button
-              :disabled="isConnected"
+              :disabled="connectedToServer"
               label="Refresh Connection"
               class="w-full"
             />

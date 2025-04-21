@@ -1,8 +1,22 @@
 import { ref } from 'vue';
 import {v7 as uuiv7} from 'uuid'
+const getBrowserInfo = () => {
+    return {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+        screen: {
+            width: screen.width,
+            height: screen.height,
+            pixelRatio: window.devicePixelRatio
+        }
+    };
+};
+
 let ws;
 let reconnectAttempts = 0;
 let reconnectTimeout = null; // Keep track of the reconnect timeout
+let client_uuid = uuiv7()
 
 // Create a reactive ref to store the received message
 const receivedMessage = ref(null);
@@ -19,7 +33,7 @@ const logWithTimestamp = (level, message) => {
 
 const initializeWebSocket = () => {
     logWithTimestamp('log', 'Initializing WebSocket connection...');
-    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/' + uuiv7());
+    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/' + client_uuid);
 
     ws.onopen = () => {
         logWithTimestamp('log', 'WebSocket Connected');
@@ -30,6 +44,7 @@ const initializeWebSocket = () => {
             clearTimeout(reconnectTimeout);
             reconnectTimeout = null;
         }
+        sendMessage('client_info', getBrowserInfo());
     };
 
     ws.onmessage = (event) => {
@@ -55,9 +70,8 @@ const initializeWebSocket = () => {
 const sendMessage = (action, message, recipient = 'server') => {
     if (ws?.readyState === WebSocket.OPEN) {
         try {
-            logWithTimestamp('log', `Sending message: { action: ${action}, message: ${message}, recipient: ${recipient} }`);
             ws.send(JSON.stringify({
-                from: 'client',
+                from: `Client ${client_uuid}`,
                 to: recipient,
                 action: action,
                 message: message

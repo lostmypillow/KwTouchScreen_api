@@ -1,140 +1,100 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed, reactive } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { alertStore } from "../../store/alertStore";
 import Countdown from "../../lib/Countdown";
 import Button from "primevue/button";
 import { commonStore } from "../../store/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
 import BackButton from "../../components/buttons/BackButton.vue";
+import websocketService from "../../lib/websocketService";
 
+const router = useRouter();
+const isLoading = ref(false);
+const currentDep = ref("");
+const currentRating = ref(0);
 const imageLoading = reactive({});
+const currentEmp = ref();
+
+const reportError = (prefix, error) => {
+  websocketService.sendMessage(
+    "client_error",
+    `${prefix}: ${typeof error === "string" ? error : JSON.stringify(error)}`
+  );
+};
+
+const countdown = new Countdown(30, () => {
+  try {
+    commonStore.clear();
+    router.push("/");
+  } catch (err) {
+    reportError("Countdown callback error", err);
+  }
+});
+
 const onImageLoad = (employeeId) => {
   imageLoading[employeeId] = false;
 };
 
-// Handle image load error
 const onImageError = (employeeId) => {
   imageLoading[employeeId] = false;
 };
 
-const selectedClass = ref("");
-const router = useRouter();
-const isLoading = ref(false);
-const countdown = new Countdown(30, () => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] Countdown expired. Clearing data and navigating to home.`
-  );
-  commonStore.clear();
-  router.push("/");
-});
-
-const currentDep = ref("");
-const handleSelectDepartment = (department) => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] handleSelectDepartment called with department: ${department}`
-  );
-  currentDep.value = department;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentDep set to: ${
-      currentDep.value
-    }`
-  );
-  currentEmp.value = null;
-  currentRating.value = 0;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentEmp reset to null and currentRating reset to 0`
-  );
-  countdown.reset();
-};
-
-const handleEditDepartment = () => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] handleEditDepartment called`
-  );
-  currentDep.value = "";
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentDep reset to empty string`
-  );
-  currentEmp.value = null;
-  currentRating.value = 0;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentEmp reset to null and currentRating reset to 0`
-  );
-  countdown.reset();
-};
-
-const currentEmp = ref();
-const handleSelectEmployee = (employee) => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] handleSelectEmployee called with employee: ${
-      employee.姓名
-    }`
-  );
-  currentEmp.value = employee;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentEmp set to: ${
-      currentEmp.value.姓名
-    }`
-  );
-  countdown.reset();
-};
-
-const handleEditEmployee = () => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] handleEditEmployee called`
-  );
-  currentEmp.value = null;
-  currentRating.value = 0;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] currentEmp reset to null and currentRating reset to 0`
-  );
-  countdown.reset();
-};
-onMounted(() => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] onMounted called`
-  );
-  countdown.start();
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] countdown started`
-  );
-  commonStore.user_data.rateable_employees.forEach((employee) => {
-    imageLoading[employee.學號] = true;
-  });
-  if (commonStore.is_math_rate == true) {
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] Setting department to '數輔' based on is_math_rate`
+const imageURL = (employee_id) => {
+  try {
+    return (
+      "http://" +
+      import.meta.env.VITE_SERVER_URL +
+      "/picture/employee/" +
+      employee_id
     );
-    currentDep.value = "數輔";
-    if (
-      commonStore.user_data.rateable_employees.filter(
-        (x) => x.主要部門 == currentDep.value
-      ).length == 0
-    ) {
-      alertStore.setMessage("目前沒有您可評分的數輔老師!");
-      router.push("/alert");
-    }
+  } catch (err) {
+    reportError("imageURL generation error", err);
+    return "";
   }
-});
+};
 
-onUnmounted(() => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] onUnmounted called`
-  );
-  countdown.stop();
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] countdown stopped`
-  );
-});
+const onSelectDepartment = (department) => {
+  try {
+    currentDep.value = department;
+    currentEmp.value = null;
+    currentRating.value = 0;
+    countdown.reset();
+  } catch (err) {
+    reportError("onSelectDepartment error", err);
+  }
+};
+
+const onSelectEmployee = (employee) => {
+  try {
+    currentEmp.value = employee;
+    countdown.reset();
+  } catch (err) {
+    reportError("onSelectEmployee error", err);
+  }
+};
+
+const onEditEmployee = () => {
+  try {
+    currentEmp.value = null;
+    currentRating.value = 0;
+    countdown.reset();
+  } catch (err) {
+    reportError("onEditEmployee error", err);
+  }
+};
+
 const sendSurveyResult = async () => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] sendSurveyResult called`
-  );
   isLoading.value = true;
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] isLoading set to true`
-  );
+
+  if (!currentEmp.value || !commonStore.user_data) {
+    reportError("sendSurveyResult validation failed", "Missing emp or user");
+    alertStore.setMessage("資料不完整，請重新操作");
+    router.push("/alert");
+    isLoading.value = false;
+    return;
+  }
+
   try {
     const surveyResult = await sendToAPI("/survey/", {
       employee_id: currentEmp.value.學號,
@@ -142,60 +102,61 @@ const sendSurveyResult = async () => {
       student_id: commonStore.user_data.學號,
       rating: currentRating.value,
     });
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] Survey result: ${JSON.stringify(
-        surveyResult
-      )}`
-    );
+
     alertStore.setMessage(
       surveyResult.code != 200 ? "發生錯誤" : "滿意度送出成功!"
     );
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] alertStore message set`
-    );
     router.push("/alert");
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] Navigating to /alert`
-    );
   } catch (error) {
-    console.error(
-      `[SurveyPage.vue] [${new Date().toISOString()}] Error sending survey result: ${error}`
-    );
+    reportError("sendSurveyResult exception", error);
+    commonStore.is_math_rate = false;
     alertStore.setMessage("系統錯誤，請稍後再試");
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] alertStore message set for error`
-    );
     router.push("/alert");
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] Navigating to /alert on error`
-    );
   } finally {
     isLoading.value = false;
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] isLoading set to false`
-    );
-    commonStore.is_math_rate = false;
-    console.log(
-      `[SurveyPage.vue] [${new Date().toISOString()}] commonStore.is_math_rate set to false`
-    );
   }
 };
 
-const currentRating = ref(0);
-const isRatingZero = ref(currentRating.value == 0);
+onMounted(() => {
+  try {
+    countdown.start();
 
-const imageURL = (employee_id) => {
-  console.log(
-    `[SurveyPage.vue] [${new Date().toISOString()}] imageURL called with employee_id: ${employee_id}`
-  );
-  return (
-    "http://" +
-    import.meta.env.VITE_SERVER_URL +
-    "/picture/employee/" +
-    employee_id
-  );
-};
+    const employees = commonStore.user_data?.rateable_employees || [];
+    employees.forEach((employee) => {
+      try {
+        imageLoading[employee.學號] = true;
+      } catch (e) {
+        reportError("imageLoading init error", e);
+      }
+    });
+
+    if (commonStore.is_math_rate === true) {
+      currentDep.value = "數輔";
+
+      const available = employees.filter(
+        (x) => x.主要部門 === currentDep.value
+      );
+
+      if (available.length === 0) {
+        alertStore.setMessage("目前沒有您可評分的數輔老師!");
+        router.push("/alert");
+        return;
+      }
+    }
+  } catch (err) {
+    reportError("onMounted error", err);
+  }
+});
+
+onUnmounted(() => {
+  try {
+    countdown.stop();
+  } catch (err) {
+    reportError("onUnmounted error", err);
+  }
+});
 </script>
+
 
 <template>
   <div
@@ -225,7 +186,7 @@ const imageURL = (employee_id) => {
           )"
           :key="department"
           :label="department"
-          @click="handleSelectDepartment(department)"
+          @click="onSelectDepartment(department)"
           :variant="department == currentDep ? '' : 'outlined'"
           :raised="department == currentDep"
           :disabled="
@@ -237,7 +198,7 @@ const imageURL = (employee_id) => {
 
     <div
       v-show="currentDep != ''"
-      class="flex flex-row items-center justify-start w-full gap-2"
+      class="flex flex-row items-start justify-start w-full gap-2"
     >
       <h3 class="text-2xl shrink-0 font-extrabold">選擇評分對象:</h3>
       <ScrollPanel
@@ -251,7 +212,7 @@ const imageURL = (employee_id) => {
           },
         }"
       >
-        <div class="flex flex-col items-center justify-center gap-4">
+        <div class="flex flex-col items-start justify-center gap-4">
           <Button
             size="large"
             variant="outlined"
@@ -261,7 +222,7 @@ const imageURL = (employee_id) => {
               )
             )"
             :key="employee.學號"
-            @click="handleSelectEmployee(employee)"
+            @click="onSelectEmployee(employee)"
             class="p-8"
           >
             <transition name="out-in">
@@ -293,13 +254,15 @@ const imageURL = (employee_id) => {
       </ScrollPanel>
 
       <div v-else class="flex flex-row items-center justify-start gap-2">
-        <Button size="large" class="p-8" raised
+        <Button size="large" class="p-8 text-2xl" raised
           ><img
             id="pfp"
             :src="imageURL(currentEmp.學號)"
             alt=""
             class="h-12"
-          />{{ currentEmp.姓名 }}</Button
+          /><label class="text-2xl" for="pfp">{{
+            currentEmp.姓名
+          }}</label></Button
         >
 
         <Button
@@ -308,7 +271,7 @@ const imageURL = (employee_id) => {
           icon="pi pi-pencil"
           label="修改"
           class="shrink-0 font-extrabold"
-          @click="handleEditEmployee"
+          @click="onEditEmployee"
           rounded
         />
       </div>
