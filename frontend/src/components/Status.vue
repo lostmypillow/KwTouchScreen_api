@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted, Transition, watch } from "vue";
-import websocketService from "../../lib/websocketService";
-import { commonStore } from "../../store/commonStore";
+import websocketService from "../lib/websocketService";
+import { commonStore } from "../store_old/commonStore";
 import { useRouter, useRoute } from "vue-router";
-
+import { store } from "../store";
 const router = useRouter();
 const route = useRoute();
 
@@ -32,17 +32,13 @@ const timeInterval = setInterval(() => {
 }, 1000);
 
 ///
-
-const classesToday = ref([]);
-const classWithSeat = ref({});
-
 const currentIndex = ref(0);
 let classInterval;
 
 const startAlternatingClass = () => {
-  if (classesToday.value.length > 0) {
+  if (store.classesToday.length > 0) {
     classInterval = setInterval(() => {
-      currentIndex.value = (currentIndex.value + 1) % classesToday.value.length;
+      currentIndex.value = (currentIndex.value + 1) % store.classesToday.length;
       
     }, 5000);
   }
@@ -64,7 +60,7 @@ onUnmounted(() => {
 });
 
 watch(
-  () => classesToday.value.length,
+  () => store.classesToday.length,
   (newLength) => {
     console.log(
       `[Status.vue] [${new Date().toISOString()}] watch: classesToday length changed to ${newLength}`
@@ -77,19 +73,7 @@ watch(
   }
 );
 
-watch(websocketService.receivedMessage, (newMessage) => {
 
-  if (newMessage.action == "update class") {
-    classesToday.value = newMessage.message.classes_today;
-    classWithSeat.value = newMessage.message.class_with_seats;
-    commonStore.today_class_4_auth = classWithSeat.value.班別
-      ? classWithSeat.value.班別
-      : "";
-    commonStore.today_class_4_display = classWithSeat.value.班級名稱;
-    commonStore.male_seats = classWithSeat.value.男座位;
-    commonStore.female_seats = classWithSeat.value.女座位;
-  }
-});
 </script>
 
 <template>
@@ -112,24 +96,24 @@ watch(websocketService.receivedMessage, (newMessage) => {
           <div class="flex flex-col items-start justify-start pt-4">
             <h3>
               {{
-                classesToday[currentIndex]
-                  ? classesToday[currentIndex]?.內容
+                store.classesToday[currentIndex]
+                  ? store.classesToday[currentIndex]?.內容
                   : "\u00A0"
               }}
             </h3>
             <h3>
               {{
-                classesToday[currentIndex]
-                  ? classesToday[currentIndex]?.教室
+                store.classesToday[currentIndex]
+                  ? store.classesToday[currentIndex]?.教室
                   : "\u00A0"
               }}
             </h3>
           </div>
 
-          <div class="flex text-7xl font-bold noto-mono">
+          <div class="flex text-8xl font-bold">
             {{
-              classesToday[currentIndex]
-                ? classesToday[currentIndex].時間
+              store.classesToday[currentIndex]
+                ? store.classesToday[currentIndex].時間
                 : "\u00A0"
             }}
           </div>
@@ -142,20 +126,20 @@ watch(websocketService.receivedMessage, (newMessage) => {
     >
       <p
         class="text-2xl font-bold"
-        v-if="Object.keys(classWithSeat).length > 0"
+        v-if="Object.keys(store.classWithSeats).length > 0"
       >
         {{
-          classWithSeat
-            ? classWithSeat?.班級名稱 +
+          store.classWithSeats
+            ? store.classWithSeats?.班級名稱 +
               "補位剩餘 男:" +
-              classWithSeat.男座位?.length +
+              store.classWithSeats.男座位?.length +
               ", 女:" +
-              classWithSeat.女座位?.length
+              store.classWithSeats.女座位?.length
             : "\u00A0"
         }}
       </p>
       <span
-        v-if="route.fullPath != '/home' && route.fullPath != '/alert'"
+        v-if="route.fullPath != '/' "
       ></span>
     </div>
   </div>

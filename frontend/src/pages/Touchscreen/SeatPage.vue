@@ -1,13 +1,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
-import { alertStore } from "../../store/alertStore";
-import { commonStore } from "../../store/commonStore";
+import { dialogStore } from "../../store_old/dialogStore";
+import { commonStore } from "../../store_old/commonStore";
 import { sendToAPI } from "../../lib/sendToAPI";
 import websocketService from "../../lib/websocketService";
 import Countdown from "../../lib/Countdown";
 import Button from "primevue/button";
-import BackButton from "../../components/buttons/BackButton.vue";
+import BackButton from "../../components/buttons/HomeButton.vue";
 
 const router = useRouter();
 const selectedSeat = ref("");
@@ -43,7 +43,7 @@ const handleSubmit = async () => {
 
   if (!commonStore.user_data || !selectedSeat.value) {
     reportError("handleSubmit pre-check", "Missing user_data or selectedSeat");
-    alertStore.setMessage("資料不完整，請重新操作");
+    dialogStore.setMessage("資料不完整，請重新操作");
     router.push("/alert");
     isLoading.value = false;
     return;
@@ -60,13 +60,13 @@ const handleSubmit = async () => {
       `[SeatPage.vue] seatResult: ${JSON.stringify(seatResult)}`
     );
 
-    alertStore.setMessage(
+    dialogStore.setMessage(
       seatResult.code != 200 ? "發生錯誤" : "選擇完成!"
     );
     router.push("/alert");
   } catch (error) {
     reportError("Error during seat submission", error);
-    alertStore.setMessage("系統錯誤，請稍後再試");
+    dialogStore.setMessage("系統錯誤，請稍後再試");
     router.push("/alert");
   } finally {
     isLoading.value = false;

@@ -1,69 +1,23 @@
 import "./style.css";
-import "primeicons/primeicons.css";
+import 'primeicons/primeicons.css'
 import { createApp } from "vue";
-import {
-  createWebHistory,
-  createRouter,
-  createWebHashHistory,
-} from "vue-router";
+import router from "./router";
 import { definePreset } from "@primevue/themes";
 import PrimeVue from "primevue/config";
 import Material from "@primevue/themes/material";
-import HomePage from "./pages/Touchscreen/HomePage.vue";
-import AuthPage from "./pages/Touchscreen/AuthPage.vue";
+import HomePage from "./views/HomeView.vue";
+import AuthPage from "./views/AuthView.vue";
 import SeatPage from "./pages/Touchscreen/SeatPage.vue";
 import AlertPage from "./pages/Touchscreen/AlertPage.vue";
-import SurveyPage from "./pages/Touchscreen/SurveyPage.vue";
+import SurveyPage from "./views/SurveyView.vue";
 import { autoAnimatePlugin } from "@formkit/auto-animate/vue";
 import App from "./App.vue";
-import ToastService from 'primevue/toastservice';
 import DashboardPage from "./pages/DashboardPage.vue";
 import RootLayout from "./pages/Touchscreen/RootLayout.vue";
 import AwardPage from "./pages/Touchscreen/AwardPage.vue";
-const routes = [
-  {
-    path: "/",
-    redirect: 'home',
-    component: RootLayout,
-    children: [
-      {
-        path: "home",
-        component: HomePage,
-      },
-      {
-        path: "alert",
-        component: AlertPage,
-      },
-      {
-        path: "auth/:callback",
-        component: AuthPage,
-      },
-      {
-        path: "seats",
-        component: SeatPage,
-      },
-      {
-        path: "survey",
-        component: SurveyPage,
-      },
-      {
-        path: "dashboard",
-        component: DashboardPage,
-      },
-      {
-        path: "awards",
-        component: AwardPage
-      }
-    ],
-  },
+// For circular progress
+import ProgressSpinner from 'primevue/progressspinner';
 
-  
-];
-
-const router = createRouter({
-  history: createWebHistory('/touch/'),
-  routes,
-});
 
 const MyPreset = definePreset(Material, {
   semantic: {
@@ -93,5 +47,4 @@ createApp(App)
     },
   })
   .use(autoAnimatePlugin)
-  .use(ToastService)
   .mount("#app");

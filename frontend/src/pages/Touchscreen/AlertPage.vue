@@ -1,9 +1,9 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { alertStore } from "../../store/alertStore";
+import { dialogStore } from "../../store_old/dialogStore";
 import Countdown from "../../lib/Countdown";
-import { commonStore } from "../../store/commonStore";
+import { commonStore } from "../../store_old/commonStore";
 import websocketService from "../../lib/websocketService";
 // Define props to handle error
 defineProps(["error"]);
@@ -57,7 +57,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col items-center justify-center w-full h-full gap-4">
-    <h2 class="text-5xl font-bold">{{ alertStore.message }}</h2>
+    <h2 class="text-5xl font-bold">{{ dialogStore.message }}</h2>
     <h2 class="text-3xl font-bold">{{ fake_countdown }}秒後回主畫面</h2>
   </div>
 </template>

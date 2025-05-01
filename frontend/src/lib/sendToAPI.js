@@ -2,7 +2,7 @@ import axios from "axios";
 import websocketService from "./websocketService";
 
 export async function sendToAPI(urlFragment, data) {
-  const apiUrl = "http://" + import.meta.env.VITE_SERVER_URL + urlFragment;
+  const apiUrl = "http://" + import.meta.env.VITE_FASTAPI_URL + urlFragment;
 
   try {
     const res = await axios.post(apiUrl, data, {

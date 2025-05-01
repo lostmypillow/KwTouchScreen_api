@@ -1,10 +1,10 @@
 <script setup>
-import BackButton from "../../components/buttons/BackButton.vue";
-import { commonStore } from "../../store/commonStore";
+import BackButton from "../../components/buttons/HomeButton.vue";
+import { commonStore } from "../../store_old/commonStore";
 import { ref, onMounted, onUnmounted } from "vue";
 import Numpad from "../../components/Numpad.vue";
 import { sendToStuAPI } from "../../lib/sendToStuAPI";
-import { alertStore } from "../../store/alertStore";
+import { dialogStore } from "../../store_old/dialogStore";
 import { useRouter } from "vue-router";
 import Countdown from "../../lib/Countdown";
 import websocketService from "../../lib/websocketService";
@@ -25,7 +25,7 @@ const callAPI = async () => {
       "client_error",
       "AwardPage.vue callAPI validation failed: selectedCourse or user_data is undefined"
     );
-    alertStore.setMessage("資料不完整，請重新操作");
+    dialogStore.setMessage("資料不完整，請重新操作");
     router.push("/alert");
     return;
   }
@@ -45,13 +45,13 @@ const callAPI = async () => {
         `Scholarship submit failed: ${JSON.stringify(stuResult)}`
       );
       if (stuResult.data.detail == "scholarship apply already exists") {
-        alertStore.setMessage("抱歉，此獎學金已申請過!");
+        dialogStore.setMessage("抱歉，此獎學金已申請過!");
       } else {
-        alertStore.setMessage("申請失敗，請稍後再試");
+        dialogStore.setMessage("申請失敗，請稍後再試");
       }
       router.push("/alert");
     } else {
-      alertStore.setMessage("申請完成!");
+      dialogStore.setMessage("申請完成!");
       router.push("/alert");
     }
   } catch (error) {
@@ -60,7 +60,7 @@ const callAPI = async () => {
       `AwardPage.vue Exception in callAPI: ${JSON.stringify(error)}`
     );
     console.error(error);
-    alertStore.setMessage("系統錯誤，請稍後再試");
+    dialogStore.setMessage("系統錯誤，請稍後再試");
     router.push("/alert");
   }
 };
@@ -131,8 +131,8 @@ onUnmounted(() => {
             >
               <Select
                 v-model="selectedCourse"
-                :options="commonStore.courses"
-                optionLabel="class_name"
+                :options="commonStore.scholarship_dates"
+                optionLabel="ssd_id"
                 placeholder="請選擇班級"
                 class="w-full md:w-56"
                 checkmark

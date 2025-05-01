@@ -1,14 +1,17 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed, reactive } from "vue";
 import { useRouter } from "vue-router";
-import { alertStore } from "../../store/alertStore";
-import Countdown from "../../lib/Countdown";
+import { dialogStore } from "../store_old/dialogStore";
+import Countdown from "../lib/Countdown";
 import Button from "primevue/button";
-import { commonStore } from "../../store/commonStore";
-import { sendToAPI } from "../../lib/sendToAPI";
-import BackButton from "../../components/buttons/BackButton.vue";
-import websocketService from "../../lib/websocketService";
-
+import { commonStore } from "../store_old/commonStore";
+import { sendToAPI } from "../lib/sendToAPI";
+import BackButton from "../components/buttons/HomeButton.vue";
+import websocketService from "../lib/websocketService";
+import { store } from "../store";
+import { useCountdown } from "../composables/useCountdown";
+import { useLogger } from "../composables/useLogger";
+const logging = useLogger()
 const router = useRouter();
 const isLoading = ref(false);
 const currentDep = ref("");
@@ -22,16 +25,20 @@ const reportError = (prefix, error) => {
     `${prefix}: ${typeof error === "string" ? error : JSON.stringify(error)}`
   );
 };
+const showTemporaryError = (message) => {
+  store.setupDialog("error", message);
+  store.showDialog()
 
-const countdown = new Countdown(30, () => {
-  try {
-    commonStore.clear();
-    router.push("/");
-  } catch (err) {
-    reportError("Countdown callback error", err);
-  }
+  setTimeout(() => {
+    store.closeDialog();
+    reset();
+    start();
+  }, 3000);
+};
+const { start, reset, stop } = useCountdown(30, () => {
+  store.clearUserData()
+  router.push("/");
 });
-
 const onImageLoad = (employeeId) => {
   imageLoading[employeeId] = false;
 };
@@ -44,13 +51,13 @@ const imageURL = (employee_id) => {
   try {
     return (
       "http://" +
-      import.meta.env.VITE_SERVER_URL +
+      import.meta.env.VITE_FASTAPI_URL +
       "/picture/employee/" +
       employee_id
     );
   } catch (err) {
-    reportError("imageURL generation error", err);
-    return "";
+    logging.error(`imageURL generation error ${JSON.stringify(err)}`);
+    return;
   }
 };
 
@@ -59,26 +66,32 @@ const onSelectDepartment = (department) => {
     currentDep.value = department;
     currentEmp.value = null;
     currentRating.value = 0;
-    countdown.reset();
+    reset();
   } catch (err) {
     reportError("onSelectDepartment error", err);
   }
+  // console.log('Selected dep:')
+  // console.log(typeof department)
+  // console.log(department)
 };
 
 const onSelectEmployee = (employee) => {
   try {
     currentEmp.value = employee;
-    countdown.reset();
+    reset();
   } catch (err) {
     reportError("onSelectEmployee error", err);
   }
+  // console.log("Selected Employee:")
+  // console.log(typeof employee)
+  // console.log(employee)
 };
 
 const onEditEmployee = () => {
   try {
     currentEmp.value = null;
     currentRating.value = 0;
-    countdown.reset();
+    reset();
   } catch (err) {
     reportError("onEditEmployee error", err);
   }
@@ -87,30 +100,22 @@ const onEditEmployee = () => {
 const sendSurveyResult = async () => {
   isLoading.value = true;
 
-  if (!currentEmp.value || !commonStore.user_data) {
-    reportError("sendSurveyResult validation failed", "Missing emp or user");
-    alertStore.setMessage("資料不完整，請重新操作");
-    router.push("/alert");
-    isLoading.value = false;
-    return;
-  }
-
   try {
     const surveyResult = await sendToAPI("/survey/", {
       employee_id: currentEmp.value.學號,
       employee_dep: currentEmp.value.主要部門,
-      student_id: commonStore.user_data.學號,
+      student_id: store.userData.學號,
       rating: currentRating.value,
     });
 
-    alertStore.setMessage(
+    dialogStore.setMessage(
       surveyResult.code != 200 ? "發生錯誤" : "滿意度送出成功!"
     );
     router.push("/alert");
   } catch (error) {
     reportError("sendSurveyResult exception", error);
     commonStore.is_math_rate = false;
-    alertStore.setMessage("系統錯誤，請稍後再試");
+    dialogStore.setMessage("系統錯誤，請稍後再試");
     router.push("/alert");
   } finally {
     isLoading.value = false;
@@ -119,42 +124,22 @@ const sendSurveyResult = async () => {
 
 onMounted(() => {
   try {
-    countdown.start();
-
-    const employees = commonStore.user_data?.rateable_employees || [];
-    employees.forEach((employee) => {
+    start();
+    if (store.surveyIs4Math) {
+      currentDep.value = "數輔"
+    }
+    store.userData.rateable_employees.forEach((employee) => {
       try {
         imageLoading[employee.學號] = true;
       } catch (e) {
         reportError("imageLoading init error", e);
       }
     });
-
-    if (commonStore.is_math_rate === true) {
-      currentDep.value = "數輔";
-
-      const available = employees.filter(
-        (x) => x.主要部門 === currentDep.value
-      );
-
-      if (available.length === 0) {
-        alertStore.setMessage("目前沒有您可評分的數輔老師!");
-        router.push("/alert");
-        return;
-      }
-    }
   } catch (err) {
     reportError("onMounted error", err);
   }
 });
 
-onUnmounted(() => {
-  try {
-    countdown.stop();
-  } catch (err) {
-    reportError("onUnmounted error", err);
-  }
-});
 </script>
 
 
@@ -169,8 +154,8 @@ onUnmounted(() => {
       </div>
 
       <h4 class="text-base">
-        已登入為 {{ commonStore.user_data.學號 }}
-        {{ commonStore.user_data.姓名 }}
+        已登入為 {{ store.userData.學號 }}
+        {{ store.userData.姓名 }}
       </h4>
     </div>
 
@@ -178,11 +163,11 @@ onUnmounted(() => {
 
     <div class="flex flex-row items-center justify-start w-full gap-2">
       <h3 class="text-2xl shrink-0 font-extrabold">選擇評分部門:</h3>
-      <div class="flex flex-row flex-wrap gap-1">
+      <div class="flex flex-row flex-wrap gap-1" v-if="store.userData.rateable_employees">
         <Button
           size="large"
           v-for="department in new Set(
-            commonStore.user_data.rateable_employees.map((x) => x.主要部門)
+            store.userData.rateable_employees.map((x) => x.主要部門)
           )"
           :key="department"
           :label="department"
@@ -190,7 +175,7 @@ onUnmounted(() => {
           :variant="department == currentDep ? '' : 'outlined'"
           :raised="department == currentDep"
           :disabled="
-            department != currentDep && commonStore.is_math_rate == true
+            department != currentDep && store.surveyIs4Math == true
           "
         />
       </div>
@@ -202,8 +187,8 @@ onUnmounted(() => {
     >
       <h3 class="text-2xl shrink-0 font-extrabold">選擇評分對象:</h3>
       <ScrollPanel
-        @scroll="countdown.reset()"
-        :style="{ '.p-scrollpanel-bar': 'opacity: 1 !important;' }"
+        @scroll="reset()"
+        :style="{ '.p-scrollpanel-bar': 'opacity: 1 !important' }"
         v-if="currentEmp == null"
         class="w-full h-112 pr-4"
         :dt="{
@@ -212,12 +197,12 @@ onUnmounted(() => {
           },
         }"
       >
-        <div class="flex flex-col items-start justify-center gap-4">
+        <div class="flex flex-col items-start justify-center gap-4" v-if="store.userData.rateable_employees">
           <Button
             size="large"
             variant="outlined"
             v-for="employee in new Set(
-              commonStore.user_data.rateable_employees.filter(
+              store.userData.rateable_employees.filter(
                 (x) => x.主要部門 == currentDep
               )
             )"
@@ -286,7 +271,7 @@ onUnmounted(() => {
     >
       <div class="flex flex-row gap-2 items-center">
         <h3 class="text-2xl shrink-0 font-extrabold">選擇滿意度：</h3>
-        <Rating v-model="currentRating" />
+        <Rating :style="{'.p-rating-icon':'font-size: 2rem !important'}" v-model="currentRating" />
       </div>
     </div>
     <Button
@@ -322,5 +307,10 @@ onUnmounted(() => {
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
+}
+::v-deep(.p-rating-icon) {
+  font-size: 2rem !important;
+  width: 30px;
+  height:30px;
 }
 </style>

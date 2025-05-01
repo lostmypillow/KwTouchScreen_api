@@ -33,7 +33,7 @@ const logWithTimestamp = (level, message) => {
 
 const initializeWebSocket = () => {
     logWithTimestamp('log', 'Initializing WebSocket connection...');
-    ws = new WebSocket('ws://' + import.meta.env.VITE_SERVER_URL + '/ws/' + client_uuid);
+    ws = new WebSocket('ws://' + import.meta.env.VITE_FASTAPI_URL + '/ws/' + client_uuid);
 
     ws.onopen = () => {
         logWithTimestamp('log', 'WebSocket Connected');

@@ -2,7 +2,7 @@
 import { RouterView } from "vue-router";
 import { onMounted } from "vue";
 import VideoPlayer from "../../components/bottom/VideoPlayer.vue";
-import Status from "../../components/top/Status.vue";
+import Status from "../../components/Status.vue";
 import websocketService from "../../lib/websocketService";
 
 onMounted(() => websocketService.initializeWebSocket());

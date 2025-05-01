@@ -16,13 +16,13 @@ async def get_jwt(student_id: str) -> str:
 
     async with httpx.AsyncClient() as client:
         get_token_response = await client.post(
-            'https://stulearning.kaowei.tw/api/token/get_token',
+            'https://studev.kaowei.tw/api/token/get_token',
             headers=headers,
             data=data
         )
         token = random.choice(get_token_response.json()['token'])
         get_jwt_token_response = await client.post(
-            'https://stulearning.kaowei.tw/api/token/request_jwt_token',
+            'https://studev.kaowei.tw/api/token/request_jwt_token',
             headers=headers,
             data={
                 "student_id": student_id,
@@ -49,11 +49,11 @@ async def main(student_id):
             "Accept": "application/json"
         }
 
-        get_uuid_response = await client.get(f"https://stulearning.kaowei.tw/api/user?search_value={student_id}", headers=headers)
+        get_uuid_response = await client.get(f"https://studev.kaowei.tw/api/user?search_value={student_id}", headers=headers)
 
         user_uuid = get_uuid_response.json()['data'][0]['user_uuid']
 
-        get_applicable_response = await client.get(f"https://stulearning.kaowei.tw/api/scholarship/apply/applicable?user_uuid={user_uuid}", headers=headers)
+        get_applicable_response = await client.get(f"https://studev.kaowei.tw/api/scholarship/apply/applicable?user_uuid={user_uuid}", headers=headers)
 
     pprint(get_applicable_response.json())
 asyncio.run(main('000000'))

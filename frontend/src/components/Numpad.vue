@@ -7,14 +7,6 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  minLength: {
-    type: Number,
-    default: 6, // default validation logic
-  },
   buttonLabel: {
     type: String,
     default: "登入", // default text for the submit button
