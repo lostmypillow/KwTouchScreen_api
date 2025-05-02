@@ -5,10 +5,11 @@ type LogLevel = 'log' | 'warn' | 'error' | 'debug' | 'info'
 const getTimestamp = () => new Date().toISOString()
 
 export function useLogger(context = 'global') {
-  const { sendMessage } = useWebSocket(import.meta.env.VITE_FASTAPI_URL)
+  const { sendMessage } = useWebSocket()
 
   const log = (level: LogLevel, msg: string, data?: any) => {
-    const message = `[${context}] [${getTimestamp()}] ${msg}`
+    const timestamp = getTimestamp()
+    const message = `[${context}] [${timestamp}] ${msg}`
 
     // Output to console
     console[level](message, data || '')
@@ -17,7 +18,7 @@ export function useLogger(context = 'global') {
     sendMessage('client_log', {
       level,
       message,
-      timestamp: getTimestamp(),
+      timestamp: timestamp,
       context,
       extra: data || null
     })

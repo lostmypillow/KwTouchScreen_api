@@ -1,45 +1,51 @@
 <script setup>
 import { useRouter } from "vue-router";
-import { ref } from "vue";
-import { commonStore } from "../store_old/commonStore";
-import { useWebSocket } from "../composables/useWebSocket";
-import { store } from "../store";
 import { useLogger } from "../composables/useLogger";
-const dialogIcon = ref("");
-const dialogText = ref("");
-const isLoading = ref(false);
+import { store } from "../store";
+import { useAPI } from "../composables/useAPI";
+import { v1 as uuidv1 } from "uuid";
 const router = useRouter();
-const ws = useWebSocket();
 const logger = useLogger();
-const routeToMathSurvey = () => {
-  store.surveyIs4Math = true;
-  routeToAuth("survey");
-};
-
+const api = useAPI()
 const routeToAuth = (authType) => {
-  logger.info(store.checkSeatsAvailbility());
+  if (authType == "mathSurvey") {
+    store.surveyIs4Math = true;
+    authType = "survey";
+  }
+
   store.authType = authType;
 
   if (store.authType == "seat" && store.checkSeatsAvailbility() == false) {
-    store.setupDialog("error", "目前沒有您可選的補位資料");
+    store.setupDialog("error", `目前沒有您可選的補位資料`);
     store.showDialog();
     setTimeout(() => store.closeDialog(), 3000);
     return;
   }
+
   try {
     router.push("/auth");
+    return;
   } catch (err) {
-    logger.error("client_error", `Navigation error to '${path}': ${err}`);
+    logger.error(`Navigation error to '${authType}': ${JSON.stringify(err)}`);
+    store.setupDialog("error", `系統發生錯誤!`);
+    store.showDialog();
+    setTimeout(() => store.closeDialog(), 3000);
+    return;
   }
 };
+const c = async () => {
+  const v = await api.getApplicableAwards('300003')
+  console.log(v)
+}
 </script>
 <template>
+  <button @click="c">meow</button>
   <div class="pt-4 grid grid-rows-2 grid-cols-2 w-full h-full">
     <div class="w-full h-full p-4">
       <Button
         class="h-full w-full flex-1 text-center"
         rounded
-        @click="routeToAuth('seat')"
+        @click="() => routeToAuth('seat')"
         label="今日補位"
       >
         <span class="text-3xl break-words">今日補位</span>
@@ -68,7 +74,7 @@ const routeToAuth = (authType) => {
     <div class="w-full h-full p-4">
       <Button
         class="h-full w-full flex-1 text-center text-[calc(1vw+1em)] break-words"
-        @click="routeToMathSurvey"
+        @click="() => routeToAuth('mathSurvey')"
         rounded
         label="數學輔導老師教學品質"
       >

@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted, watch, computed, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { dialogStore } from "../store_old/dialogStore";
-import Countdown from "../lib/Countdown";
 import Button from "primevue/button";
 import { commonStore } from "../store_old/commonStore";
 import { sendToAPI } from "../lib/sendToAPI";
@@ -11,23 +10,23 @@ import websocketService from "../lib/websocketService";
 import { store } from "../store";
 import { useCountdown } from "../composables/useCountdown";
 import { useLogger } from "../composables/useLogger";
-const logging = useLogger()
+import { useAPI } from "../composables/useAPI";
+const logger = useLogger();
 const router = useRouter();
-const isLoading = ref(false);
 const currentDep = ref("");
 const currentRating = ref(0);
 const imageLoading = reactive({});
 const currentEmp = ref();
+const api = useAPI();
+const { start, reset, stop } = useCountdown(30, () => {
+  store.clearUserData();
+  router.push("/");
+});
 
-const reportError = (prefix, error) => {
-  websocketService.sendMessage(
-    "client_error",
-    `${prefix}: ${typeof error === "string" ? error : JSON.stringify(error)}`
-  );
-};
-const showTemporaryError = (message) => {
+const showTemporaryError = (message, error) => {
+  logger.error(error);
   store.setupDialog("error", message);
-  store.showDialog()
+  store.showDialog();
 
   setTimeout(() => {
     store.closeDialog();
@@ -35,31 +34,12 @@ const showTemporaryError = (message) => {
     start();
   }, 3000);
 };
-const { start, reset, stop } = useCountdown(30, () => {
-  store.clearUserData()
-  router.push("/");
-});
-const onImageLoad = (employeeId) => {
-  imageLoading[employeeId] = false;
-};
 
-const onImageError = (employeeId) => {
-  imageLoading[employeeId] = false;
-};
-
-const imageURL = (employee_id) => {
-  try {
-    return (
-      "http://" +
-      import.meta.env.VITE_FASTAPI_URL +
-      "/picture/employee/" +
-      employee_id
-    );
-  } catch (err) {
-    logging.error(`imageURL generation error ${JSON.stringify(err)}`);
-    return;
-  }
-};
+const imageURL = (employee_id) =>
+  "http://" +
+  import.meta.env.VITE_FASTAPI_URL +
+  "/picture/employee/" +
+  employee_id;
 
 const onSelectDepartment = (department) => {
   try {
@@ -68,11 +48,8 @@ const onSelectDepartment = (department) => {
     currentRating.value = 0;
     reset();
   } catch (err) {
-    reportError("onSelectDepartment error", err);
+    showTemporaryError("選擇部門時發生錯誤!", err);
   }
-  // console.log('Selected dep:')
-  // console.log(typeof department)
-  // console.log(department)
 };
 
 const onSelectEmployee = (employee) => {
@@ -80,11 +57,8 @@ const onSelectEmployee = (employee) => {
     currentEmp.value = employee;
     reset();
   } catch (err) {
-    reportError("onSelectEmployee error", err);
+    showTemporaryError("選擇員工時發生錯誤!", err);
   }
-  // console.log("Selected Employee:")
-  // console.log(typeof employee)
-  // console.log(employee)
 };
 
 const onEditEmployee = () => {
@@ -93,40 +67,58 @@ const onEditEmployee = () => {
     currentRating.value = 0;
     reset();
   } catch (err) {
-    reportError("onEditEmployee error", err);
+    showTemporaryError("修改員工時發生錯誤!", err);
   }
 };
 
 const sendSurveyResult = async () => {
-  isLoading.value = true;
-
-  try {
-    const surveyResult = await sendToAPI("/survey/", {
+  stop()
+  store.setupDialog("loading", "處理中，請稍候...");
+  store.showDialog();
+  logger.info("[SurveyView.vue] Calling api.sendData");
+  const authResult = await api.sendData(
+    `http://${import.meta.env.VITE_FASTAPI_URL}/survey/`,
+    { "Content-Type": "application/json" },
+    {
       employee_id: currentEmp.value.學號,
       employee_dep: currentEmp.value.主要部門,
       student_id: store.userData.學號,
       rating: currentRating.value,
-    });
+    }
+  );
 
-    dialogStore.setMessage(
-      surveyResult.code != 200 ? "發生錯誤" : "滿意度送出成功!"
+  logger.info(
+    `[SurveyView.vue] Received authResult: ${JSON.stringify(authResult)}`
+  );
+
+  if (authResult.success == false) {
+    logger.error(
+      `[SurveyView.vue] ${
+        store.authStudentId
+      } sending survey did NOT succeed: ${JSON.stringify(authResult)}`
     );
-    router.push("/alert");
-  } catch (error) {
-    reportError("sendSurveyResult exception", error);
-    commonStore.is_math_rate = false;
-    dialogStore.setMessage("系統錯誤，請稍後再試");
-    router.push("/alert");
-  } finally {
-    isLoading.value = false;
+
+    logger.info("[SurveyView.vue] Setting error message");
+    showTemporaryError(
+      typeof authResult?.data?.detail === "string"
+        ? authResult.data.detail
+        : "系統發生錯誤"
+    );
+  } else {
+    store.setupDialog("success", "滿意度送出成功!");
+    setTimeout(() => {
+      store.closeDialog();
+      store.clearUserData()
+      router.push("/");
+    }, 3000);
   }
 };
 
 onMounted(() => {
   try {
     start();
-    if (store.surveyIs4Math) {
-      currentDep.value = "數輔"
+    if (store.surveyIs4Math == true) {
+      currentDep.value = "數輔";
     }
     store.userData.rateable_employees.forEach((employee) => {
       try {
@@ -136,12 +128,10 @@ onMounted(() => {
       }
     });
   } catch (err) {
-    reportError("onMounted error", err);
+    showTemporaryError("系統發生錯誤", err);
   }
 });
-
 </script>
-
 
 <template>
   <div
@@ -163,7 +153,10 @@ onMounted(() => {
 
     <div class="flex flex-row items-center justify-start w-full gap-2">
       <h3 class="text-2xl shrink-0 font-extrabold">選擇評分部門:</h3>
-      <div class="flex flex-row flex-wrap gap-1" v-if="store.userData.rateable_employees">
+      <div
+        class="flex flex-row flex-wrap gap-1"
+        v-if="store.userData.rateable_employees"
+      >
         <Button
           size="large"
           v-for="department in new Set(
@@ -174,9 +167,7 @@ onMounted(() => {
           @click="onSelectDepartment(department)"
           :variant="department == currentDep ? '' : 'outlined'"
           :raised="department == currentDep"
-          :disabled="
-            department != currentDep && store.surveyIs4Math == true
-          "
+          :disabled="department != currentDep && store.surveyIs4Math == true"
         />
       </div>
     </div>
@@ -188,16 +179,13 @@ onMounted(() => {
       <h3 class="text-2xl shrink-0 font-extrabold">選擇評分對象:</h3>
       <ScrollPanel
         @scroll="reset()"
-        :style="{ '.p-scrollpanel-bar': 'opacity: 1 !important' }"
         v-if="currentEmp == null"
         class="w-full h-112 pr-4"
-        :dt="{
-          bar: {
-            background: '{primary.color}',
-          },
-        }"
       >
-        <div class="flex flex-col items-start justify-center gap-4" v-if="store.userData.rateable_employees">
+        <div
+          class="flex flex-col items-start justify-center gap-4"
+          v-if="store.userData.rateable_employees"
+        >
           <Button
             size="large"
             variant="outlined"
@@ -222,8 +210,8 @@ onMounted(() => {
             <transition name="out-in">
               <img
                 v-show="!imageLoading[employee.學號]"
-                @load="onImageLoad(employee.學號)"
-                @error="onImageError(employee.學號)"
+                @load="imageLoading[employee.學號] = false"
+                @error="imageLoading[employee.學號] = false"
                 id="pfp"
                 :src="imageURL(employee.學號)"
                 alt=""
@@ -271,14 +259,16 @@ onMounted(() => {
     >
       <div class="flex flex-row gap-2 items-center">
         <h3 class="text-2xl shrink-0 font-extrabold">選擇滿意度：</h3>
-        <Rating :style="{'.p-rating-icon':'font-size: 2rem !important'}" v-model="currentRating" />
+        <Rating
+          :style="{ '.p-rating-icon': 'font-size: 2rem !important' }"
+          v-model="currentRating"
+        />
       </div>
     </div>
     <Button
       size="large"
       class="w-full text-3xl font-extrabold"
       v-show="currentDep != '' && currentEmp != null && currentRating > 0"
-      :loading="isLoading"
       severity="success"
       label="送出"
       icon="pi pi-check"
@@ -311,6 +301,6 @@ onMounted(() => {
 ::v-deep(.p-rating-icon) {
   font-size: 2rem !important;
   width: 30px;
-  height:30px;
+  height: 30px;
 }
 </style>

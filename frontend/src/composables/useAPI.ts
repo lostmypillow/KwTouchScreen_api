@@ -1,48 +1,143 @@
-import axios from 'axios'
-import { useLogger } from './useLogger'
-const logger = useLogger()
+import axios from "axios";
+import { useLogger } from "./useLogger";
+
+const logger = useLogger();
+
 export function useAPI() {
-  const sendToAPI = async (urlFragment: string, data: any) => {
-    const apiUrl = `http://${import.meta.env.VITE_FASTAPI_URL}/${urlFragment}`
+  const BASE_URL = "https://studev.kaowei.tw/api";
+  const defaultHeaders = {
+    accept: "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+  const jwtHeaders = async (studentId: string) => ({
+    Authorization: `Bearer ${(await getJwt(studentId)).data}`,
+    Accept: "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
+  });
 
+  const handleAxiosError = (error: any, context: string) => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status ?? "N/A";
+      const message = error.response?.data?.message || error.message;
+      logger.error(`${context} - Axios error (${status}): ${message}`);
+      return {
+        success: false,
+        error: `Error ${status}: ${message}`,
+        data: null,
+      };
+    } else {
+      logger.error(`${context} - Unknown error: ${error.message}`);
+      return {
+        success: false,
+        error: `Unknown error: ${error.message}`,
+        data: null,
+      };
+    }
+  };
+
+  const sendData = async (
+    url: string,
+    headers: Record<string, string>,
+    data: any
+  ) => {
     try {
-      const res = await axios.post(apiUrl, data, {
-        headers: { 'Content-Type': 'application/json' },
-      })
-
-      return res
-    } catch (error: any) {
-      if (error.response) {
-        logger.error(
-          `Response error.\nData: ${JSON.stringify(data)}\nResponse $ ${error.response.status}: ${JSON.stringify(
-            error.response.data
-          )}`
-        )
-
-        return {
-          code: error.response.status,
-          data: error.response.data,
-        }
-      } else if (error.request) {
-        logger.error(
-          `No response received. Request: ${JSON.stringify(error.request)}`
-        )
-      } else {
-        logger.error(
-          `Axios setup error: ${error.message}`
-        )
-      }
+      const response = await axios.post(url, data, { headers });
+      return {
+        success: true,
+        error: null,
+        data: response.data,
+      };
+    } catch (error) {
+      const errorData = error.response?.data;
+      const errorMsg =
+        error.response?.data?.message || error.message || "Unknown error";
 
       return {
-        code: 500,
-        data: {
-          detail: '系統錯誤，請稍後再試',
-        },
-      }
+        success: false,
+        error: `POST ${url} failed: ${errorMsg}`,
+        data: errorData,
+      };
     }
-  }
+  };
 
-  const sendToStuAPI = sendToAPI // alias for student version if needed
+  const getJwt = async (studentId: string) => {
 
-  return { sendToAPI, sendToStuAPI }
+    const tokenData = new URLSearchParams({
+      enumType: "student_id",
+      value: studentId,
+    });
+
+    const tokenRes = await sendData(`${BASE_URL}/token/get_token`, defaultHeaders, tokenData);
+    if (!tokenRes.success || !Array.isArray(tokenRes.data?.token)) {
+      return {
+        success: false,
+        error: "Token retrieval failed",
+        data: null,
+      };
+    }
+
+    const tokens = tokenRes.data.token;
+    const selectedToken = tokens[Math.floor(Math.random() * tokens.length)];
+
+
+    const jwtRes = await sendData(`${BASE_URL}/token/request_jwt_token`, defaultHeaders, new URLSearchParams({
+      student_id: studentId,
+      app_token: selectedToken,
+    }));
+    if (jwtRes.success) {
+      return {
+        success: true,
+        error: null,
+        data: jwtRes.data.access_token,
+      };
+    } else {
+      return {
+        success: false,
+        error: "JWT generation failed",
+        data: null,
+      };
+    }
+  };
+
+  const getApplicableAwards = async (studentId: string) => {
+    const jwtResult = await getJwt(studentId);
+    if (!jwtResult.success) return jwtResult;
+
+    const authHeaders = {
+      Authorization: `Bearer ${jwtResult.data}`,
+      Accept: "application/json",
+    };
+
+    try {
+      const uuidResp = await axios.get(
+        `${BASE_URL}/user`,
+        { headers: authHeaders }
+      );
+      const userUuid = uuidResp.data.data?.[0]?.user_uuid;
+      if (!userUuid) throw new Error("User UUID not found");
+
+      const applicableResp = await axios.get(
+        `${BASE_URL}/scholarship/apply/applicable?user_uuid=${userUuid}`,
+        { headers: authHeaders }
+      );
+
+      logger.info("Applicable scholarships:", applicableResp.data.data);
+
+      return {
+        success: true,
+        error: null,
+        data: applicableResp.data.data.scholarship_dates,
+      };
+    } catch (error) {
+      return handleAxiosError(error, "Fetching awards");
+    }
+  };
+
+  return {
+    jwtHeaders,
+    defaultHeaders,
+    sendData,
+    getJwt,
+    getApplicableAwards,
+  };
 }

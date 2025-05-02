@@ -5,6 +5,7 @@ const router = useRouter();
 const goHome = () => {
   store.clearUserData()
   router.push("/");
+  return
 };
 </script>
 

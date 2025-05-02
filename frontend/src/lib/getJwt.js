@@ -1,35 +1,53 @@
 import axios from "axios";
+
 export const getJwt = async (studentId) => {
   try {
-    const headers = {
-      accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-    };
-
-    const tokenResp = await axios.post(
+    const tokenResponse = await axios.post(
       "https://studev.kaowei.tw/api/token/get_token",
       new URLSearchParams({
         enumType: "student_id",
         value: studentId,
       }),
-      { headers }
+      {
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
     );
 
-    const tokens = tokenResp.data.token;
-    const token = tokens[Math.floor(Math.random() * tokens.length)];
+    const tokens = tokenResponse.data.token;
+    if (!Array.isArray(tokens) || tokens.length === 0) {
+      throw new Error("No tokens returned for the given student ID.");
+    }
 
-    const jwtResp = await axios.post(
+    const selectedToken = tokens[Math.floor(Math.random() * tokens.length)];
+
+    const jwtResponse = await axios.post(
       "https://studev.kaowei.tw/api/token/request_jwt_token",
       new URLSearchParams({
         student_id: studentId,
-        token: token,
+        token: selectedToken,
       }),
-      { headers }
+      {
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
     );
 
-    return jwtResp.data.access_token;
+    return jwtResponse.data.access_token;
   } catch (error) {
-    console.error(error);
-    return "error";
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || error.message;
+
+      console.error(`Axios error (${status}): ${msg}`);
+      return `Request failed with status ${status}: ${msg}`;
+    } else {
+      console.error(`Unexpected error: ${error.message}`);
+      return `Unexpected error: ${error.message}`;
+    }
   }
 };

@@ -25,6 +25,7 @@ export function useCountdown(initialTime = 30, onFinish?: () => void) {
   const reset = () => {
     stop()
     timeLeft.value = initialTime
+    start()
   }
 
   onUnmounted(stop)

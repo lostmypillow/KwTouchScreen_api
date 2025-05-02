@@ -19,26 +19,14 @@ const getBrowserInfo = () => ({
     pixelRatio: window.devicePixelRatio
   }
 })
-const url = 'ws://' + import.meta.env.VITE_FASTAPI_URL +`/ws/${clientUUID}`
+const url = 'ws://' + import.meta.env.VITE_FASTAPI_URL +`/ws/android_touchscreen`
 const getTimestamp = () => new Date().toISOString()
 
 const log = (level: 'log' | 'error' | 'warn', msg: string, data?: any) => {
     console[level](`[WebSocket] ${msg}`, data || '')
   
     // Optional: forward to server *only if socket is ready*
-    if (socket.value?.readyState === WebSocket.OPEN) {
-      socket.value.send(JSON.stringify({
-        action: 'client_log',
-        from: `Client ${clientUUID}`,
-        to: 'server',
-        message: {
-          level,
-          text: msg,
-          timestamp: new Date().toISOString(),
-          extra: data || null
-        }
-      }))
-    }
+
   }
   
 
@@ -98,7 +86,7 @@ const sendMessage = (action: string, message: any, to = 'server') => {
   if (socket.value?.readyState === WebSocket.OPEN) {
     try {
       socket.value.send(JSON.stringify({
-        from: `Client ${clientUUID}`,
+        from: `Client Android Touchscreen`,
         to,
         action,
         message

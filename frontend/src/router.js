@@ -8,6 +8,8 @@ import HomeView from "./views/HomeView.vue";
 import AuthView from "./views/AuthView.vue";
 import NotFoundView from "./views/NotFoundView.vue";
 import SurveyView from "./views/SurveyView.vue";
+import SeatView from "./views/SeatView.vue";
+import AwardView from "./views/AwardView.vue";
 export default createRouter({
     history: createWebHistory('/touch/'),
     routes: [
@@ -26,6 +28,14 @@ export default createRouter({
             {
                 path: 'survey',
                 components: {default: SurveyView}
+            },
+            {
+              path: 'seat',
+              components: {default: SeatView}
+            },
+            {
+              path: 'award',
+              components: {default: AwardView}
             },
             {
                 path: '/:pathMatch(.*)*',

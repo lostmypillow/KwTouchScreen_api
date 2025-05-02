@@ -4,14 +4,15 @@ import { onMounted, nextTick } from "vue";
 import DeleteButton from "../components/buttons/DeleteButton.vue";
 import NumButton from "../components/buttons/NumButton.vue";
 import { commonStore } from "../store_old/commonStore";
-import { sendToAPI } from "../lib/sendToAPI";
 import BackButton from "../components/buttons/HomeButton.vue";
 import { getApplicableAwards } from "../lib/getApplicableAwards";
 import { store } from "../store";
 import { useLogger } from "../composables/useLogger";
 import { useCountdown } from "../composables/useCountdown";
+import { useAPI } from "../composables/useAPI";
 const logger = useLogger();
 const router = useRouter();
+const api = useAPI();
 const { start, reset, stop } = useCountdown(30, () => {
   store.clearUserData();
   router.push("/");
@@ -21,10 +22,10 @@ const showTemporaryError = (message) => {
 
   setTimeout(() => {
     store.closeDialog();
+    store.clearUserData()
     reset();
-    start();
     focusInput();
-    store.authStudentId = "";
+    window.addEventListener("keydown", keydownHandler);
   }, 3000);
 };
 const handleIDInput = async () => {
@@ -42,20 +43,20 @@ const handleIDInput = async () => {
 
   try {
     logger.info("[AuthView.vue] Calling sendToAPI");
-    const authResult = await sendToAPI("/auth/", {
-      student_id: store.authStudentId,
-      type: store.authType,
-    });
-
-    logger.info(
-      `[AuthView.vue] Received authResult: ${JSON.stringify(authResult)}`
+    const authResult = await api.sendData(
+      `http://${import.meta.env.VITE_FASTAPI_URL}/auth/`,
+      { "Content-Type": "application/json" },
+      {
+        student_id: store.authStudentId,
+        type: store.authType,
+      }
     );
 
-    if (authResult.code != 200) {
+    if (authResult.success == false) {
       logger.error(
         `[AuthView.vue] ${
           store.authStudentId
-        } authResult.code is not 200: ${JSON.stringify(authResult)}`
+        } authentication did NOT succeed: ${JSON.stringify(authResult)}`
       );
 
       logger.info("[AuthView.vue] Setting error message");
@@ -68,22 +69,17 @@ const handleIDInput = async () => {
     }
 
     logger.info("[AuthView.vue] Auth succeeded, saving user_data");
-    console.log("look here");
-    console.log(authResult.data);
     store.userData = authResult.data;
 
-    if (store.authType == "awards") {
+    if (store.authType == "award") {
       logger.info(
         "[AuthView.vue] authType is 'awards', loading awards info, showing awards loading dialog message"
       );
       store.setupDialog("loading", "載入獎學金資訊中，請稍候...");
+      
 
       try {
-        logger.info("[AuthView.vue] Calling getApplicableAwards");
-        commonStore.courses = await getApplicableAwards(
-          commonStore.user_data.學號
-        );
-        logger.info("[AuthView.vue] Got courses:", commonStore.courses);
+        store.scholarshipDates = (await api.getApplicableAwards(store.userData.學號)).data
       } catch (err) {
         logger.error(
           `[AuthView.vue] ${
@@ -97,9 +93,9 @@ const handleIDInput = async () => {
       }
 
       if (
-        !commonStore.courses ||
-        commonStore.courses.length === 0 ||
-        commonStore.courses === "error"
+        !store.scholarshipDates ||
+        store.scholarshipDates.length === 0 ||
+        store.scholarshipDates === "error"
       ) {
         logger.error(
           `[AuthView.vue] ${store.authStudentId}  No applicable awards found or invalid response for: ${commonStore.user_data.學號}. Showing no applicable awards dialog message`
@@ -134,15 +130,14 @@ const handleIDInput = async () => {
   }
 };
 
-const listenForEnterKey = () => {
   const keydownHandler = async (e) => {
     try {
-      reset();
+      stop();
       if (e.key === "Enter") {
         e.stopPropagation();
         e.preventDefault();
         window.removeEventListener("keydown", keydownHandler);
-        stop();
+        
         await handleIDInput();
         return;
       }
@@ -152,13 +147,12 @@ const listenForEnterKey = () => {
     }
   };
 
-  window.addEventListener("keydown", keydownHandler);
-};
+
+
 // Handle button click for entering student ID
 const handleButtonClick = (number) => {
   store.authStudentId += number;
   reset();
-  start();
 };
 const focusInput = () => {
   const inputElement = document.querySelector(".p-inputtext");
@@ -169,14 +163,13 @@ const focusInput = () => {
 const backspace = () => {
   store.authBackspace();
   reset();
-  start();
 };
+window.addEventListener("keydown", keydownHandler);
 // Component mounted logic
 onMounted(() => {
   start();
   try {
     nextTick(() => focusInput());
-    listenForEnterKey();
   } catch (err) {
     logger.error(`[AuthView.vue] onMounted error: ${err}`);
   }
