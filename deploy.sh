@@ -40,7 +40,7 @@ fi
 mkdir -p "$PUBLIC_DIR"
 cd "$FRONTEND_DIR"
 rm -rf node_modules
-rm -f package-lock.json
+[ -f package-lock.json ] && rm package-lock.json
 npm install >/dev/null 2>&1
 npm run build >/dev/null 2>&1
 
