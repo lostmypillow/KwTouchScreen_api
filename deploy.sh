@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 APP_DIR="$(pwd)/backend"
 SERVICE_NAME="kwtouchscreen"
