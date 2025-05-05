@@ -1,25 +1,14 @@
 <script setup>
 import { RouterView } from "vue-router";
-import { dialogStore } from "./store_old/dialogStore";
 import { useWebSocket } from "./composables/useWebSocket";
 import { store } from "./store";
 import { watch } from "vue";
-const ws = useWebSocket()
+const ws = useWebSocket();
 watch(ws.receivedMessage, (newMessage) => {
-
-if (newMessage.action == "update class") {
-  store.classWithSeats = newMessage.message.class_with_seats
-  store.classesToday = newMessage.message.classes_today
-  
-  // classesToday.value = ;
-  // classWithSeat.value = ;
-  // commonStore.today_class_4_auth = classWithSeat.value.班別
-  //   ? classWithSeat.value.班別
-  //   : "";
-  // commonStore.today_class_4_display = classWithSeat.value.班級名稱;
-  // commonStore.male_seats = classWithSeat.value.男座位;
-  // commonStore.female_seats = classWithSeat.value.女座位;
-}
+  if (newMessage.action == "update class") {
+    store.ClassWithSeats = newMessage.message.class_with_seats;
+    store.ClassesToday = newMessage.message.classes_today;
+  }
 });
 </script>
 

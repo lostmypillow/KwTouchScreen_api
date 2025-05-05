@@ -3,17 +3,14 @@ import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";
 import { store } from "../store";
 import { useAPI } from "../composables/useAPI";
-import { v1 as uuidv1 } from "uuid";
 const router = useRouter();
 const logger = useLogger();
-const api = useAPI()
 const routeToAuth = (authType) => {
+  store.authType = authType;
   if (authType == "mathSurvey") {
     store.surveyIs4Math = true;
-    authType = "survey";
+    store.authType = "survey";
   }
-
-  store.authType = authType;
 
   if (store.authType == "seat" && store.checkSeatsAvailbility() == false) {
     store.setupDialog("error", `目前沒有您可選的補位資料`);
@@ -33,13 +30,8 @@ const routeToAuth = (authType) => {
     return;
   }
 };
-const c = async () => {
-  const v = await api.getApplicableAwards('300003')
-  console.log(v)
-}
 </script>
 <template>
-  <button @click="c">meow</button>
   <div class="pt-4 grid grid-rows-2 grid-cols-2 w-full h-full">
     <div class="w-full h-full p-4">
       <Button

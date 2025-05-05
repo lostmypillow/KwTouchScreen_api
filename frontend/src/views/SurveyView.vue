@@ -1,12 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed, reactive } from "vue";
+import { ref, onMounted,  reactive } from "vue";
 import { useRouter } from "vue-router";
-import { dialogStore } from "../store_old/dialogStore";
-import Button from "primevue/button";
-import { commonStore } from "../store_old/commonStore";
-import { sendToAPI } from "../lib/sendToAPI";
-import BackButton from "../components/buttons/HomeButton.vue";
-import websocketService from "../lib/websocketService";
 import { store } from "../store";
 import { useCountdown } from "../composables/useCountdown";
 import { useLogger } from "../composables/useLogger";
@@ -72,7 +66,7 @@ const onEditEmployee = () => {
 };
 
 const sendSurveyResult = async () => {
-  stop()
+  stop();
   store.setupDialog("loading", "處理中，請稍候...");
   store.showDialog();
   logger.info("[SurveyView.vue] Calling api.sendData");
@@ -108,7 +102,7 @@ const sendSurveyResult = async () => {
     store.setupDialog("success", "滿意度送出成功!");
     setTimeout(() => {
       store.closeDialog();
-      store.clearUserData()
+      store.clearUserData();
       router.push("/");
     }, 3000);
   }
@@ -134,147 +128,131 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-start w-full h-full gap-4 p-4 text-2xl"
-  >
-    <div class="flex flex-row w-full items-center justify-between">
-      <div class="flex flex-row items-center justify-start gap-2">
-        <BackButton />
-        <h1 class="text-4xl font-extrabold">滿意度調查</h1>
-      </div>
+  <!-- Class Selection -->
 
-      <h4 class="text-base">
-        已登入為 {{ store.userData.學號 }}
-        {{ store.userData.姓名 }}
-      </h4>
+  <div class="flex flex-row items-center justify-start w-full gap-2">
+    <h3 class="text-2xl shrink-0 font-extrabold">選擇評分部門:</h3>
+    <div
+      class="flex flex-row flex-wrap gap-1"
+      v-if="store.userData.rateable_employees"
+    >
+      <Button
+        size="large"
+        v-for="department in new Set(
+          store.userData.rateable_employees.map((x) => x.主要部門)
+        )"
+        :key="department"
+        :label="department"
+        @click="onSelectDepartment(department)"
+        :variant="department == currentDep ? '' : 'outlined'"
+        :raised="department == currentDep"
+        :disabled="department != currentDep && store.surveyIs4Math == true"
+      />
     </div>
+  </div>
 
-    <!-- Class Selection -->
-
-    <div class="flex flex-row items-center justify-start w-full gap-2">
-      <h3 class="text-2xl shrink-0 font-extrabold">選擇評分部門:</h3>
+  <div
+    v-show="currentDep != ''"
+    class="flex flex-row items-start justify-start w-full gap-2"
+  >
+    <h3 class="text-2xl shrink-0 font-extrabold">選擇評分對象:</h3>
+    <ScrollPanel
+      @scroll="reset()"
+      v-if="currentEmp == null"
+      class="w-full h-112 pr-4"
+    >
       <div
-        class="flex flex-row flex-wrap gap-1"
+        class="flex flex-col items-start justify-center gap-4"
         v-if="store.userData.rateable_employees"
       >
         <Button
           size="large"
-          v-for="department in new Set(
-            store.userData.rateable_employees.map((x) => x.主要部門)
-          )"
-          :key="department"
-          :label="department"
-          @click="onSelectDepartment(department)"
-          :variant="department == currentDep ? '' : 'outlined'"
-          :raised="department == currentDep"
-          :disabled="department != currentDep && store.surveyIs4Math == true"
-        />
-      </div>
-    </div>
-
-    <div
-      v-show="currentDep != ''"
-      class="flex flex-row items-start justify-start w-full gap-2"
-    >
-      <h3 class="text-2xl shrink-0 font-extrabold">選擇評分對象:</h3>
-      <ScrollPanel
-        @scroll="reset()"
-        v-if="currentEmp == null"
-        class="w-full h-112 pr-4"
-      >
-        <div
-          class="flex flex-col items-start justify-center gap-4"
-          v-if="store.userData.rateable_employees"
-        >
-          <Button
-            size="large"
-            variant="outlined"
-            v-for="employee in new Set(
-              store.userData.rateable_employees.filter(
-                (x) => x.主要部門 == currentDep
-              )
-            )"
-            :key="employee.學號"
-            @click="onSelectEmployee(employee)"
-            class="p-8"
-          >
-            <transition name="out-in">
-              <Skeleton
-                v-if="imageLoading[employee.學號]"
-                width="4rem"
-                height="3rem"
-                class="h-12"
-              />
-            </transition>
-
-            <transition name="out-in">
-              <img
-                v-show="!imageLoading[employee.學號]"
-                @load="imageLoading[employee.學號] = false"
-                @error="imageLoading[employee.學號] = false"
-                id="pfp"
-                :src="imageURL(employee.學號)"
-                alt=""
-                class="h-12"
-              />
-            </transition>
-
-            <label class="text-2xl" for="pfp">
-              {{ employee.姓名 }}
-            </label>
-          </Button>
-        </div>
-      </ScrollPanel>
-
-      <div v-else class="flex flex-row items-center justify-start gap-2">
-        <Button size="large" class="p-8 text-2xl" raised
-          ><img
-            id="pfp"
-            :src="imageURL(currentEmp.學號)"
-            alt=""
-            class="h-12"
-          /><label class="text-2xl" for="pfp">{{
-            currentEmp.姓名
-          }}</label></Button
-        >
-
-        <Button
-          size="large"
           variant="outlined"
-          icon="pi pi-pencil"
-          label="修改"
-          class="shrink-0 font-extrabold"
-          @click="onEditEmployee"
-          rounded
-        />
-      </div>
-    </div>
+          v-for="employee in new Set(
+            store.userData.rateable_employees.filter(
+              (x) => x.主要部門 == currentDep
+            )
+          )"
+          :key="employee.學號"
+          @click="onSelectEmployee(employee)"
+          class="p-8"
+        >
+          <transition name="out-in">
+            <Skeleton
+              v-if="imageLoading[employee.學號]"
+              width="4rem"
+              height="3rem"
+              class="h-12"
+            />
+          </transition>
 
-    <!-- Seat Edit -->
+          <transition name="out-in">
+            <img
+              v-show="!imageLoading[employee.學號]"
+              @load="imageLoading[employee.學號] = false"
+              @error="imageLoading[employee.學號] = false"
+              id="pfp"
+              :src="imageURL(employee.學號)"
+              alt=""
+              class="h-12"
+            />
+          </transition>
 
-    <!-- Rating -->
-    <div
-      v-if="currentDep != '' && currentEmp != null"
-      class="flex flex-row items-center justify-between gap-2 w-full"
-    >
-      <div class="flex flex-row gap-2 items-center">
-        <h3 class="text-2xl shrink-0 font-extrabold">選擇滿意度：</h3>
-        <Rating
-          :style="{ '.p-rating-icon': 'font-size: 2rem !important' }"
-          v-model="currentRating"
-        />
+          <label class="text-2xl" for="pfp">
+            {{ employee.姓名 }}
+          </label>
+        </Button>
       </div>
+    </ScrollPanel>
+
+    <div v-else class="flex flex-row items-center justify-start gap-2">
+      <Button size="large" class="p-8 text-2xl" raised
+        ><img
+          id="pfp"
+          :src="imageURL(currentEmp.學號)"
+          alt=""
+          class="h-12"
+        /><label class="text-2xl" for="pfp">{{
+          currentEmp.姓名
+        }}</label></Button
+      >
+
+      <Button
+        size="large"
+        variant="outlined"
+        icon="pi pi-pencil"
+        label="修改"
+        class="shrink-0 font-extrabold"
+        @click="onEditEmployee"
+        rounded
+      />
     </div>
-    <Button
-      size="large"
-      class="w-full text-3xl font-extrabold"
-      v-show="currentDep != '' && currentEmp != null && currentRating > 0"
-      severity="success"
-      label="送出"
-      icon="pi pi-check"
-      @click="sendSurveyResult"
-    />
   </div>
+
+  <!-- Seat Edit -->
+
+  <!-- Rating -->
+  <div
+    v-if="currentDep != '' && currentEmp != null"
+    class="flex flex-row items-center justify-between gap-2 w-full"
+  >
+    <div class="flex flex-row gap-2 items-center">
+      <h3 class="text-2xl shrink-0 font-extrabold">選擇滿意度：</h3>
+      <Rating
+        :style="{ '.p-rating-icon': 'font-size: 2rem !important' }"
+        v-model="currentRating"
+      />
+    </div>
+  </div>
+  <Button
+    size="large"
+    class="w-full text-3xl font-extrabold"
+    v-show="currentDep != '' && currentEmp != null && currentRating > 0"
+    severity="success"
+    label="送出"
+    icon="pi pi-check"
+    @click="sendSurveyResult"
+  />
 </template>
 
 <style scoped>

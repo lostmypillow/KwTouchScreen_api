@@ -1,11 +1,8 @@
 <script setup>
 import { useRouter } from "vue-router";
-import { onMounted, nextTick } from "vue";
+import { onMounted, nextTick, onUnmounted } from "vue";
 import DeleteButton from "../components/buttons/DeleteButton.vue";
 import NumButton from "../components/buttons/NumButton.vue";
-import { commonStore } from "../store_old/commonStore";
-import BackButton from "../components/buttons/HomeButton.vue";
-import { getApplicableAwards } from "../lib/getApplicableAwards";
 import { store } from "../store";
 import { useLogger } from "../composables/useLogger";
 import { useCountdown } from "../composables/useCountdown";
@@ -22,7 +19,7 @@ const showTemporaryError = (message) => {
 
   setTimeout(() => {
     store.closeDialog();
-    store.clearUserData()
+    store.clearUserData();
     reset();
     focusInput();
     window.addEventListener("keydown", keydownHandler);
@@ -76,10 +73,11 @@ const handleIDInput = async () => {
         "[AuthView.vue] authType is 'awards', loading awards info, showing awards loading dialog message"
       );
       store.setupDialog("loading", "載入獎學金資訊中，請稍候...");
-      
 
       try {
-        store.scholarshipDates = (await api.getApplicableAwards(store.userData.學號)).data
+        store.scholarshipDates = (
+          await api.getApplicableAwards(store.userData.學號)
+        ).data;
       } catch (err) {
         logger.error(
           `[AuthView.vue] ${
@@ -98,19 +96,25 @@ const handleIDInput = async () => {
         store.scholarshipDates === "error"
       ) {
         logger.error(
-          `[AuthView.vue] ${store.authStudentId}  No applicable awards found or invalid response for: ${commonStore.user_data.學號}. Showing no applicable awards dialog message`
+          `[AuthView.vue] ${store.authStudentId}  No applicable awards found or invalid response for: ${store.userData.學號}. Showing no applicable awards dialog message`
         );
 
         showTemporaryError("目前沒有您可申請的獎學金");
         return;
       }
-    } else if (store.authType && store.surveyIs4Math == true) {
+    } else if (store.authType == 'survey' && store.surveyIs4Math == true) {
+      console.log('look here')
+      console.log( store.userData.rateable_employees.filter(
+          (x) => x.主要部門 === "數輔"
+        ))
       if (
         store.userData.rateable_employees.filter(
           (x) => x.主要部門 === "數輔"
-        ) === 0
+        ).length == 0
       ) {
+        console.log("No teachers for survey")
         showTemporaryError("目前沒有您可評分的數輔老師!");
+        return;
       }
     }
 
@@ -130,24 +134,22 @@ const handleIDInput = async () => {
   }
 };
 
-  const keydownHandler = async (e) => {
-    try {
-      stop();
-      if (e.key === "Enter") {
-        e.stopPropagation();
-        e.preventDefault();
-        window.removeEventListener("keydown", keydownHandler);
-        
-        await handleIDInput();
-        return;
-      }
-    } catch (err) {
-      logger.error(`[AuthView.vue] keydownHandler error: ${err}`);
+const keydownHandler = async (e) => {
+  try {
+    stop();
+    if (e.key === "Enter") {
+      e.stopPropagation();
+      e.preventDefault();
+      window.removeEventListener("keydown", keydownHandler);
+
+      await handleIDInput();
       return;
     }
-  };
-
-
+  } catch (err) {
+    logger.error(`[AuthView.vue] keydownHandler error: ${err}`);
+    return;
+  }
+};
 
 // Handle button click for entering student ID
 const handleButtonClick = (number) => {
@@ -174,61 +176,51 @@ onMounted(() => {
     logger.error(`[AuthView.vue] onMounted error: ${err}`);
   }
 });
+onUnmounted(()=>  window.removeEventListener("keydown", keydownHandler))
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-start gap-2 w-full h-full p-4">
-    <div class="flex flex-row w-full items-center justify-between">
-      <div class="flex flex-row gap-2 items-center">
-        <BackButton />
-        <h1 class="text-4xl font-extrabold text-center">登入</h1>
-      </div>
-    </div>
+  <div class="flex flex-col px-4 gap-2 w-full">
+    <InputGroup class="py-4">
+      <InputText
+        :pt="{ root: { class: 'text-2xl' } }"
+        v-model="store.authStudentId"
+        inputId="integeronly"
+        placeholder="輸入學號"
+        fluid
+        inputmode="none"
+        ref="inputRef"
+        variant="outlined"
+      />
+      <DeleteButton class="text-center" @click="backspace" />
+    </InputGroup>
 
-    <div class="flex flex-col px-4 gap-2 w-full">
-      <InputGroup class="py-4">
-        <InputText
-          :pt="{ root: { class: 'text-2xl' } }"
-          v-model="store.authStudentId"
-          inputId="integeronly"
-          placeholder="輸入學號"
-          fluid
-          inputmode="none"
-          ref="inputRef"
-          variant="outlined"
-        />
-        <DeleteButton class="text-center" @click="backspace" />
-      </InputGroup>
+    <!-- Numpad container using flexbox -->
+    <div class="flex flex-wrap gap-2 justify-between w-full">
+      <NumButton
+        v-for="number in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
+        :key="number"
+        :number="number"
+        class="flex-1 min-w-[30%] max-w-[32%] text-center"
+        @click="handleButtonClick(number)"
+      />
 
-      <!-- Numpad container using flexbox -->
-      <div class="flex flex-wrap gap-2 justify-between w-full">
-        <NumButton
-          v-for="number in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
-          :key="number"
-          :number="number"
-          class="flex-1 min-w-[30%] max-w-[32%] text-center"
-          @click="handleButtonClick(number)"
-        />
+      <NumButton
+        number="0"
+        class="flex-1 w-full text-center"
+        @click="handleButtonClick('0')"
+      />
 
-        <NumButton
-          number="0"
-          class="flex-1 w-full text-center"
-          @click="handleButtonClick('0')"
-        />
-
-        <Button
-          :disabled="
-            store.authStudentId == '' || store.authStudentId.length < 6
-          "
-          severity="success"
-          @click="handleIDInput"
-          @keydown.enter="handleIDInput"
-          icon="pi pi-arrow-right"
-          class="flex-1 min-w-[30%] max-w-[32%] text-center"
-        >
-          <span class="text-2xl font-extra-bold"> 登入 </span>
-        </Button>
-      </div>
+      <Button
+        :disabled="store.authStudentId == '' || store.authStudentId.length < 6"
+        severity="success"
+        @click="handleIDInput"
+        @keydown.enter="handleIDInput"
+        icon="pi pi-arrow-right"
+        class="flex-1 min-w-[30%] max-w-[32%] text-center"
+      >
+        <span class="text-2xl font-extra-bold"> 登入 </span>
+      </Button>
     </div>
   </div>
 </template>

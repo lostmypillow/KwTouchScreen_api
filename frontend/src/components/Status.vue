@@ -1,10 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, Transition, watch } from "vue";
-import websocketService from "../lib/websocketService";
-import { commonStore } from "../store_old/commonStore";
 import { useRouter, useRoute } from "vue-router";
 import { store } from "../store";
-const router = useRouter();
 const route = useRoute();
 
 /// Time
@@ -36,9 +33,9 @@ const currentIndex = ref(0);
 let classInterval;
 
 const startAlternatingClass = () => {
-  if (store.classesToday.length > 0) {
+  if (store.ClassesToday.length > 0) {
     classInterval = setInterval(() => {
-      currentIndex.value = (currentIndex.value + 1) % store.classesToday.length;
+      currentIndex.value = (currentIndex.value + 1) % store.ClassesToday.length;
       
     }, 5000);
   }
@@ -60,10 +57,10 @@ onUnmounted(() => {
 });
 
 watch(
-  () => store.classesToday.length,
+  () => store.ClassesToday.length,
   (newLength) => {
     console.log(
-      `[Status.vue] [${new Date().toISOString()}] watch: classesToday length changed to ${newLength}`
+      `[Status.vue] [${new Date().toISOString()}] watch: ClassesToday length changed to ${newLength}`
     );
     if (newLength > 0) {
       startAlternatingClass();
@@ -96,15 +93,15 @@ watch(
           <div class="flex flex-col items-start justify-start pt-4">
             <h3>
               {{
-                store.classesToday[currentIndex]
-                  ? store.classesToday[currentIndex]?.內容
+                store.ClassesToday[currentIndex]
+                  ? store.ClassesToday[currentIndex]?.內容
                   : "\u00A0"
               }}
             </h3>
             <h3>
               {{
-                store.classesToday[currentIndex]
-                  ? store.classesToday[currentIndex]?.教室
+                store.ClassesToday[currentIndex]
+                  ? store.ClassesToday[currentIndex]?.教室
                   : "\u00A0"
               }}
             </h3>
@@ -112,8 +109,8 @@ watch(
 
           <div class="flex text-8xl font-bold">
             {{
-              store.classesToday[currentIndex]
-                ? store.classesToday[currentIndex].時間
+              store.ClassesToday[currentIndex]
+                ? store.ClassesToday[currentIndex].時間
                 : "\u00A0"
             }}
           </div>
@@ -126,15 +123,15 @@ watch(
     >
       <p
         class="text-2xl font-bold"
-        v-if="Object.keys(store.classWithSeats).length > 0"
+        v-if="store.checkSeatsAvailbility() === true"
       >
         {{
-          store.classWithSeats
-            ? store.classWithSeats?.班級名稱 +
+          store.ClassWithSeats
+            ? store.ClassWithSeats.班級名稱 +
               "補位剩餘 男:" +
-              store.classWithSeats.男座位?.length +
+              store.ClassWithSeats.男座位?.length +
               ", 女:" +
-              store.classWithSeats.女座位?.length
+              store.ClassWithSeats.女座位?.length
             : "\u00A0"
         }}
       </p>

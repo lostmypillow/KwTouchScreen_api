@@ -1,13 +1,28 @@
 <script setup>
-import CustomDialog from '../components/CustomDialog.vue';
 import Status from '../components/Status.vue';
-import VideoPlayer from '../components/bottom/VideoPlayer.vue';
+import VideoPlayer from '../components/VideoPlayer.vue';
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+import MiddleLayout from './MiddleLayout.vue';
+
+const route = useRoute()
+
+// Wrap in MiniLayout if meta says so
+const useMiddleLayout = computed(() => route.meta.useMiniLayout === true)
 </script>
 
 
 <template>
     <Status />
-    <router-view name="default" />
+    
+    <template v-if="useMiddleLayout">
+      <MiddleLayout>
+        <router-view />
+      </MiddleLayout>
+    </template>
+    <template v-else>
+      <router-view />
+    </template>
     <VideoPlayer />
   </template>
   

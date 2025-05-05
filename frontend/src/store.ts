@@ -5,8 +5,16 @@ interface ClassItem {
   時間: string;
   共補: number;
 }
-interface classWithSeats {
-  text?: string;
+interface Seats {
+  座位: string;
+  號碼: string;
+}
+interface ClassWithSeats {
+  主檔號: number;
+  班級名稱: string;
+  班別: string;
+  男座位: Seats[];
+  女座位: Seats[];
 }
 interface RateableEmployee {
   學號: string;
@@ -44,8 +52,8 @@ export const store = reactive<{
   authStudentId: string;
   authBackspace: () => void;
   checkSeatsAvailbility: () => boolean;
-  classesToday: ClassItem[];
-  classWithSeats: classWithSeats;
+  ClassesToday: ClassItem[];
+  ClassWithSeats: ClassWithSeats;
   dialogMessage: string;
   dialogClass: string;
   dialogVisibility: boolean;
@@ -66,14 +74,26 @@ export const store = reactive<{
     store.authStudentId = store.authStudentId.slice(0, -1);
   },
   checkSeatsAvailbility() {
-    if (Object.keys(store.classWithSeats).length === 0) {
-      return false;
-    } else {
-      return true;
-    }
+    return store.ClassWithSeats.主檔號 == -1 || Object.keys(store.ClassWithSeats).length === 0 ? false : true;
   },
-  classesToday: [],
-  classWithSeats: {},
+  ClassesToday: [],
+  ClassWithSeats: {
+    主檔號: -1,
+    班級名稱: "",
+    班別: "",
+    男座位: [
+      {
+        座位: "",
+        號碼: "",
+      },
+    ],
+    女座位: [
+      {
+        座位: "",
+        號碼: "",
+      },
+    ],
+  },
   dialogMessage: "",
   dialogClass: "",
   dialogVisibility: false,
@@ -110,9 +130,9 @@ export const store = reactive<{
     rateable_employees: [],
   },
   clearUserData() {
-    store.authType = "survey"
-    store.authStudentId = ""
-    store.surveyIs4Math = false
+    store.authType = "survey";
+    store.authStudentId = "";
+    store.surveyIs4Math = false;
     store.userData = {
       學號: "000000",
       姓名: "XXX",
@@ -125,7 +145,7 @@ export const store = reactive<{
       ssd_id: "",
       year: 0,
       semester: 0,
-      times: 0 ,
+      times: 0,
       scholarship_items: [
         {
           ssi_id: "",
@@ -144,4 +164,3 @@ export const store = reactive<{
     },
   ],
 });
-

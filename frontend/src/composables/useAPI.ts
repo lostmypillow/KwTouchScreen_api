@@ -4,7 +4,7 @@ import { useLogger } from "./useLogger";
 const logger = useLogger();
 
 export function useAPI() {
-  const BASE_URL = "https://studev.kaowei.tw/api";
+  const BASE_URL = "https://stulearning.kaowei.tw/api";
   const defaultHeaders = {
     accept: "application/json",
     "Content-Type": "application/x-www-form-urlencoded",

@@ -2,19 +2,17 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCountdown } from "../composables/useCountdown";
-import HomeButton from "../components/buttons/HomeButton.vue";
 import { useLogger } from "../composables/useLogger";
-import { store } from "../store";
 import { useAPI } from "../composables/useAPI";
+import { store } from "../store";
 const logger = useLogger();
 const router = useRouter();
 const api = useAPI();
-const { start, reset, stop } = useCountdown(30, () => {
+const { start, reset } = useCountdown(30, () => {
   store.clearUserData();
   router.push("/");
 });
 const selectedSeat = ref("");
-
 
 const selectSeat = (seat) => {
   try {
@@ -61,7 +59,11 @@ const handleSubmit = async () => {
     setTimeout(() => store.closeDialog(), 3000);
   }
 };
-
+const returnGenderedSeats = () => {
+  return store.userData.性別 == "男"
+    ? store.ClassWithSeats.男座位
+    : store.ClassWithSeats.女座位;
+};
 onMounted(() => {
   try {
     start();
@@ -73,61 +75,43 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-start w-full h-full gap-4 p-4 text-2xl"
-  >
-    <div class="flex flex-row w-full items-center justify-between">
-      <div class="flex flex-row gap-2 items-center">
-        <HomeButton />
-        <h1 class="text-4xl font-extrabold">今日補位</h1>
-      </div>
-
-      <h4 class="text-base">
-        已登入為 {{ store.userData.學號 }}
-        {{ store.userData.姓名 }}
-      </h4>
-    </div>
-
-    <div class="flex flex-row items-start justify-start gap-2 mb-4 w-full">
-      <h3 class="text-2xl shrink-0 font-extrabold">班級：</h3>
-      {{ commonStore.today_class_4_display }} ({{
-        commonStore.today_class_4_auth
+  <div class="flex flex-col items-start justify-start gap-2 w-full">
+    <h3 class="text-2xl font-extrabold">
+      班級： {{ store.ClassWithSeats.班級名稱 }} ({{
+        store.ClassWithSeats.班別
       }})
-    </div>
+    </h3>
 
-    <!-- Seat Selection -->
+    <h3 class="text-2xl shrink-0 font-extrabold">
+      選擇座位：{{ selectedSeat.座位 }}
+    </h3>
 
-    <div class="flex flex-col items-start justify-start gap-2 w-full">
-      <h3 class="text-2xl shrink-0 font-extrabold">選擇座位：</h3>
-      {{ selectedSeat.座位 }}
-
-      <div class="flex flex-row flex-wrap items-center justify-start gap-4">
-        <Button
-          class="text-xl font-extrabold"
-          size="large"
-          v-for="seatOption in commonStore.seats()"
-          :key="seatOption.號碼"
-          :label="seatOption.座位"
-          @click="selectSeat(seatOption)"
-          :raised="selectedSeat.座位 == seatOption.座位"
-          :variant="selectedSeat.座位 == seatOption.座位 ? '' : 'outlined'"
-        />
-      </div>
-    </div>
-
-    <!-- Submit Button -->
-    <div
-      v-if="selectedSeat !== ''"
-      class="flex flex-row items-center justify-end gap-2 w-full"
-    >
+    <div class="flex flex-row flex-wrap items-center justify-start gap-4">
       <Button
-        class="w-full"
-        severity="success"
-        label="送出"
-        @click="handleSubmit"
-        icon="pi pi-check"
+        class="text-xl font-extrabold"
         size="large"
+        v-for="seatOption in returnGenderedSeats()"
+        :key="seatOption.號碼"
+        :label="seatOption.座位"
+        @click="selectSeat(seatOption)"
+        :raised="selectedSeat.座位 == seatOption.座位"
+        :variant="selectedSeat.座位 == seatOption.座位 ? '' : 'outlined'"
       />
     </div>
+  </div>
+
+  <!-- Submit Button -->
+  <div
+    v-if="selectedSeat !== ''"
+    class="flex flex-row items-center justify-end gap-2 w-full"
+  >
+    <Button
+      class="w-full"
+      severity="success"
+      label="送出"
+      @click="handleSubmit"
+      icon="pi pi-check"
+      size="large"
+    />
   </div>
 </template>

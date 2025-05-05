@@ -1,6 +1,5 @@
 <script setup>
 import { onMounted } from "vue";
-import BackButton from "../components/buttons/HomeButton.vue";
 import { useCountdown } from "../composables/useCountdown";
 import { useRouter } from "vue-router";
 import { store } from "../store";
@@ -15,6 +14,5 @@ onMounted(() => start());
   <div class="flex flex-col gap-4 w-full h-full items-center justify-center">
     <h1 class="text-4xl font-extrabold">您所尋找的頁面不存在</h1>
     <h2 class="text-2xl font-bold">系統將在 {{ timeLeft }} 秒後自動返回首頁</h2>
-    <BackButton />
   </div>
 </template>

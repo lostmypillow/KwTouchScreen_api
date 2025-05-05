@@ -7,7 +7,7 @@ export async function useAwards(studentId: string) {
     };
 
     const tokenResp = await axios.post(
-      "https://studev.kaowei.tw/api/token/get_token",
+      "https://stulearning.kaowei.tw/api/token/get_token",
       new URLSearchParams({
         enumType: "student_id",
         value: studentId,
@@ -19,7 +19,7 @@ export async function useAwards(studentId: string) {
     const token = tokens[Math.floor(Math.random() * tokens.length)];
 
     const jwtResp = await axios.post(
-      "https://studev.kaowei.tw/api/token/request_jwt_token",
+      "https://stulearning.kaowei.tw/api/token/request_jwt_token",
       new URLSearchParams({
         student_id: studentId,
         token,
@@ -35,10 +35,10 @@ export async function useAwards(studentId: string) {
     };
 
     const applicableResp = await axios.get(
-      `https://studev.kaowei.tw/api/scholarship/apply/applicable?user_uuid=${
+      `https://stulearning.kaowei.tw/api/scholarship/apply/applicable?user_uuid=${
         (
           await axios.get(
-            `https://studev.kaowei.tw/api/user?search_value=${studentId}`,
+            `https://stulearning.kaowei.tw/api/user?search_value=${studentId}`,
             { headers: applicableHeaders }
           )
         ).data.data[0].user_uuid
@@ -47,7 +47,7 @@ export async function useAwards(studentId: string) {
     );
 
     const appliedResp = await axios.get(
-      `https://studev.kaowei.tw/api/scholarship/apply/applied?user_uuid=${userUuid}`,
+      `https://stulearning.kaowei.tw/api/scholarship/apply/applied?user_uuid=${userUuid}`,
       { headers: applicableHeaders }
     );
 
