@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
+import { useLogger } from "../composables/useLogger";
+const logger = useLogger()
 // Retry settings
 const RETRY_DELAY = 2000; // 2 seconds delay
 
