@@ -16,30 +16,41 @@ const { start, reset, stop } = useCountdown(30, () => {
 });
 const showTemporaryError = (message) => {
   store.setupDialog("error", message);
+  logger.info(`[AuthView.vue] Showing temporary error dialog: ${message}`);
 
   setTimeout(() => {
     store.closeDialog();
-    store.clearUserData();
+    logger.info("[AuthView.vue] Dialog closed");
+    store.authStudentId = ""
+    logger.info("[AuthView.vue] authStudentId cleared");
     reset();
+    logger.info("[AuthView.vue] Countdown reset and restarted");
     focusInput();
+    logger.info("[AuthView.vue] Input focused");
     window.addEventListener("keydown", keydownHandler);
+    logger.info("[AuthView.vue] Keydown handler added");
   }, 3000);
 };
 const handleIDInput = async () => {
+  logger.info(`[AuthView.vue] Login button pressed for ${store.authStudentId}`);
   let defaultErrorMsg = "驗證失敗";
   if (store.authStudentId == "") {
+    logger.info(`[AuthView.vue] Input was empty, function returning early`);
     return;
   }
-  logger.info(`[AuthView.vue] Handling ID input for ${store.authStudentId}`);
-
-  logger.info("[AuthView.vue] Setting loading message");
   store.setupDialog("loading", "驗證中，請稍候...");
-
-  logger.info("[AuthView.vue] Showing dialog");
   store.showDialog();
+  logger.info("[AuthView.vue] Showing loading dialog: 驗證中，請稍候...");
 
   try {
-    logger.info("[AuthView.vue] Calling sendToAPI");
+    logger.info(
+      `[AuthView.vue] Calling API with URL of http://${
+        import.meta.env.VITE_FASTAPI_URL
+      }/auth/ with data of ${JSON.stringify({
+        student_id: store.authStudentId,
+        type: store.authType,
+      })}`
+    );
     const authResult = await api.sendData(
       `http://${import.meta.env.VITE_FASTAPI_URL}/auth/`,
       { "Content-Type": "application/json" },
@@ -48,15 +59,12 @@ const handleIDInput = async () => {
         type: store.authType,
       }
     );
+    logger.info(`API result: ${JSON.stringify(authResult)}`);
 
     if (authResult.success == false) {
       logger.error(
-        `[AuthView.vue] ${
-          store.authStudentId
-        } authentication did NOT succeed: ${JSON.stringify(authResult)}`
+        `[AuthView.vue] ${store.authStudentId} authResult success value is FALSE`
       );
-
-      logger.info("[AuthView.vue] Setting error message");
       showTemporaryError(
         typeof authResult?.data?.detail === "string"
           ? authResult.data.detail
@@ -65,27 +73,24 @@ const handleIDInput = async () => {
       return;
     }
 
-    logger.info("[AuthView.vue] Auth succeeded, saving user_data");
-    store.userData = authResult.data;
-
     if (store.authType == "award") {
-      logger.info(
-        "[AuthView.vue] authType is 'awards', loading awards info, showing awards loading dialog message"
-      );
       store.setupDialog("loading", "載入獎學金資訊中，請稍候...");
+      logger.info(
+        "[AuthView.vue] Since authType is 'award', showing loading dialog: 載入獎學金資訊中，請稍候...`)"
+      );
 
       try {
+        logger.info("[AuthView.vue] Calling applicable awards API...");
         store.scholarshipDates = (
-          await api.getApplicableAwards(store.userData.學號)
+          await api.getApplicableAwards(authResult.data.學號)
         ).data;
+        logger.info(`Awards data saved as ${store.scholarshipDates}`)
       } catch (err) {
         logger.error(
           `[AuthView.vue] ${
             store.authStudentId
-          }  getApplicableAwards error: ${JSON.stringify(err)}`
+          }  api.getApplicableAwards error: ${JSON.stringify(err)}`
         );
-
-        logger.info("[AuthView.vue] Setting error message and closing in 3s");
         showTemporaryError("載入獎學金資訊時發生錯誤");
         return;
       }
@@ -96,38 +101,48 @@ const handleIDInput = async () => {
         store.scholarshipDates === "error"
       ) {
         logger.error(
-          `[AuthView.vue] ${store.authStudentId}  No applicable awards found or invalid response for: ${store.userData.學號}. Showing no applicable awards dialog message`
+          `[AuthView.vue] Error while getting applicable awards for: ${
+            store.authStudentId
+          }. Null? ${!store.scholarshipDates}. Empty/no length? ${
+            store.scholarshipDates.length === 0
+          }. Equals error? ${store.scholarshipDates === "error"}.`
         );
-
         showTemporaryError("目前沒有您可申請的獎學金");
         return;
       }
-    } else if (store.authType == 'survey' && store.surveyIs4Math == true) {
-      console.log('look here')
-      console.log( store.userData.rateable_employees.filter(
-          (x) => x.主要部門 === "數輔"
-        ))
+    } else if (store.authType == "survey" && store.surveyIs4Math == true) {
+      logger.info(
+        `[AuthView.vue] authType is survey and surveyIs4Math is true. No math tutors available? ${
+          authResult.data.rateable_employees.filter((x) => x.主要部門 === "數輔")
+            .length == 0
+        }.`
+      );
       if (
-        store.userData.rateable_employees.filter(
-          (x) => x.主要部門 === "數輔"
-        ).length == 0
+        authResult.data.rateable_employees.filter((x) => x.主要部門 === "數輔")
+          .length == 0
       ) {
-        console.log("No teachers for survey")
         showTemporaryError("目前沒有您可評分的數輔老師!");
         return;
       }
     }
 
-    logger.info("[AuthView.vue] All checks passed, showing success");
+    logger.info(
+      "[AuthView.vue] All checks passed, saving results and showing success dialog: 驗證成功!"
+    );
+    store.userData = authResult.data;
     store.setupDialog("success", `驗證成功!`);
     setTimeout(() => {
-      logger.info("[AuthView.vue] Closing dialog and navigating");
+      logger.info(
+        `[AuthView.vue] Closing dialog and navigating to /${store.authType}`
+      );
       store.closeDialog();
       router.push(`/${store.authType}`);
     }, 1000);
   } catch (error) {
     logger.error(
-      `[AuthView.vue] ${store.authStudentId}  Error during authentication: ${error}`
+      `[AuthView.vue]  Error during authentication for ${
+        store.authStudentId
+      } : ${JSON.stringify(error)}`
     );
     showTemporaryError(defaultErrorMsg);
     return;
@@ -146,15 +161,19 @@ const keydownHandler = async (e) => {
       return;
     }
   } catch (err) {
-    logger.error(`[AuthView.vue] keydownHandler error: ${err}`);
+    logger.error(`[AuthView.vue] keydownHandler error: ${JSON.stringify(err)}`);
     return;
   }
 };
 
 // Handle button click for entering student ID
 const handleButtonClick = (number) => {
-  store.authStudentId += number;
-  reset();
+  try {
+    store.authStudentId += number;
+    reset();
+  } catch (error) {
+    logger.error(`[AuthView.vue] buttonClick error: ${JSON.stringify(error)}`);
+  }
 };
 const focusInput = () => {
   const inputElement = document.querySelector(".p-inputtext");
@@ -163,8 +182,12 @@ const focusInput = () => {
   }
 };
 const backspace = () => {
-  store.authBackspace();
-  reset();
+  try {
+    store.authBackspace();
+    reset();
+  } catch (error) {
+    logger.error(`[AuthView.vue] backspace error: ${JSON.stringify(error)}`);
+  }
 };
 window.addEventListener("keydown", keydownHandler);
 // Component mounted logic
@@ -172,11 +195,19 @@ onMounted(() => {
   start();
   try {
     nextTick(() => focusInput());
-  } catch (err) {
-    logger.error(`[AuthView.vue] onMounted error: ${err}`);
+  } catch (error) {
+    logger.error(`[AuthView.vue] onMounted error: ${JSON.stringify(error)}`);
   }
 });
-onUnmounted(()=>  window.removeEventListener("keydown", keydownHandler))
+onUnmounted(() => {
+  try {
+    window.removeEventListener("keydown", keydownHandler);
+  } catch (error) {
+    logger.error(
+      `[AuthView.vue] removing keydownHandler error: ${JSON.stringify(error)}`
+    );
+  }
+});
 </script>
 
 <template>

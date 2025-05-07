@@ -18,7 +18,7 @@ const { start, reset, stop } = useCountdown(30, () => {
 });
 
 const showTemporaryError = (message, error) => {
-  logger.error(error);
+  logger.error(`[SurveyView.vue] Showing error dialog ${message}: ${error}`);
   store.setupDialog("error", message);
   store.showDialog();
 
@@ -37,6 +37,7 @@ const imageURL = (employee_id) =>
 
 const onSelectDepartment = (department) => {
   try {
+    logger.info(`[SurveyView.vue] Selected ${department}`)
     currentDep.value = department;
     currentEmp.value = null;
     currentRating.value = 0;
@@ -48,6 +49,7 @@ const onSelectDepartment = (department) => {
 
 const onSelectEmployee = (employee) => {
   try {
+    logger.info(`[SurveyView.vue] Selected ${JSON.stringify(employee)}`)
     currentEmp.value = employee;
     reset();
   } catch (err) {
@@ -57,6 +59,7 @@ const onSelectEmployee = (employee) => {
 
 const onEditEmployee = () => {
   try {
+    logger.info("[SurveyView.vue] Editing employee")
     currentEmp.value = null;
     currentRating.value = 0;
     reset();
@@ -69,8 +72,13 @@ const sendSurveyResult = async () => {
   stop();
   store.setupDialog("loading", "處理中，請稍候...");
   store.showDialog();
-  logger.info("[SurveyView.vue] Calling api.sendData");
-  const authResult = await api.sendData(
+  logger.info(`[SurveyView.vue] Calling api.sendData with URL of http://${import.meta.env.VITE_FASTAPI_URL}/survey with data of ${JSON.stringify({
+      employee_id: currentEmp.value.學號,
+      employee_dep: currentEmp.value.主要部門,
+      student_id: store.userData.學號,
+      rating: currentRating.value,
+    })}`);
+  const surveyResult = await api.sendData(
     `http://${import.meta.env.VITE_FASTAPI_URL}/survey/`,
     { "Content-Type": "application/json" },
     {
@@ -82,24 +90,24 @@ const sendSurveyResult = async () => {
   );
 
   logger.info(
-    `[SurveyView.vue] Received authResult: ${JSON.stringify(authResult)}`
+    `[SurveyView.vue] Received surveyResult: ${JSON.stringify(surveyResult)}`
   );
 
-  if (authResult.success == false) {
+  if (surveyResult.success == false) {
     logger.error(
       `[SurveyView.vue] ${
         store.authStudentId
-      } sending survey did NOT succeed: ${JSON.stringify(authResult)}`
+      } sending survey did NOT succeed: ${JSON.stringify(surveyResult)}`
     );
 
-    logger.info("[SurveyView.vue] Setting error message");
     showTemporaryError(
-      typeof authResult?.data?.detail === "string"
-        ? authResult.data.detail
+      typeof surveyResult?.data?.detail === "string"
+        ? surveyResult.data.detail
         : "系統發生錯誤"
     );
   } else {
     store.setupDialog("success", "滿意度送出成功!");
+    logger.info(`[SurveyView.vue] Survey sent successfully for ${store.userData.學號} ${store.userData.姓名}`)
     setTimeout(() => {
       store.closeDialog();
       store.clearUserData();
@@ -118,11 +126,11 @@ onMounted(() => {
       try {
         imageLoading[employee.學號] = true;
       } catch (e) {
-        reportError("imageLoading init error", e);
+        logger.error(`[SurveyView.vue] Image loading error: ${e}`)
       }
     });
   } catch (err) {
-    showTemporaryError("系統發生錯誤", err);
+    showTemporaryError("抱歉，系統發生錯誤!", err);
   }
 });
 </script>

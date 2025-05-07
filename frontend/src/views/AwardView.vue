@@ -15,11 +15,10 @@ const selectedClassObj = ref({});
 const score = ref("");
 const ranking = ref("");
 const isLoading = ref(false);
-const { start, reset, stop } = useCountdown(50, () => {
+const { start, reset } = useCountdown(50, () => {
   store.clearUserData();
   router.push("/");
 });
-const dummySubmit = () => console.log(score.value);
 
 const callAPI = async () => {
   store.setupDialog("loading", "處理中，請稍候...");
@@ -36,9 +35,9 @@ const callAPI = async () => {
         score: score.value,
       }
     );
-
+    logger.info(`Scholarship result: ${JSON.stringify(stuResult)}`);
     if (stuResult.success == false) {
-      logger.error(`Scholarship submit failed: ${JSON.stringify(stuResult)}`);
+      logger.error(`Scholarship submit failed`);
       store.setupDialog(
         "error",
         stuResult.data.detail == "scholarship apply already exists"
@@ -73,15 +72,20 @@ const callAPI = async () => {
   }
 };
 watch(selectedSSDObj, () => {
+  logger.info(`[AwardView.vue] Year changed, resetting the other dropdowns`);
   selectedSSIObj.value = {};
   selectedClassObj.value = {};
 });
 
 // Clear class when SSI changes
 watch(selectedSSIObj, () => {
+  logger.info(`[AwardView.vue] Award item changed, resetting the class dropdowns`);
   selectedClassObj.value = {};
 });
-onMounted(() => start());
+onMounted(() => {
+  logger.info("[AwardView.vue] Mounted AwardView.vue")
+  start();
+});
 </script>
 
 <template>

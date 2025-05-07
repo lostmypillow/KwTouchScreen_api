@@ -16,24 +16,38 @@ const selectedSeat = ref("");
 
 const selectSeat = (seat) => {
   try {
+    logger.info(`Selected seat: ${JSON.stringify(seat)}`)
     selectedSeat.value = seat;
   } catch (err) {
-    logger.error(`selectSeat error: ${err}`);
+    logger.error(`[SeatView.vue] selectSeat error: ${JSON.stringify(err)}`);
   }
 };
 
 const handleSubmit = async () => {
+  logger.info(
+    "[SeatView.vue] Submit button pressed, setting up dialog: 處理中，請稍候..."
+  );
   store.setupDialog("loading", "處理中，請稍候...");
   store.showDialog();
 
   if (!store.userData || !selectedSeat.value) {
-    logger.error("handleSubmit pre-check: Missing user_data or selectedSeat");
+    logger.error(
+      `[SeatView.vue] handleSubmit pre-check: Missing user_data? ${!store.userData}. SelectedSeat is null? ${!selectedSeat.value}. Setting up dialog: 資料不完整，請重新操作`
+    );
     store.setupDialog("error", "資料不完整，請重新操作");
     setTimeout(() => store.closeDialog(), 3000);
     return;
   }
 
   try {
+    logger.error(
+      `[SeatView.vue] Calling API with URL of http://${
+        import.meta.env.VITE_FASTAPI_URL
+      }/seat/, with data of ${JSON.stringify({
+        學號: store.userData.學號,
+        號碼: selectedSeat.value.號碼,
+      })}`
+    );
     const seatResult = await api.sendData(
       `http://${import.meta.env.VITE_FASTAPI_URL}/seat/`,
       { "Content-Type": "application/json" },
@@ -43,20 +57,33 @@ const handleSubmit = async () => {
       }
     );
 
-    logger.info(`[SeatPage.vue] seatResult: ${JSON.stringify(seatResult)}`);
+    logger.info(`[SeatView.vue] seatResult: ${JSON.stringify(seatResult)}`);
     if (seatResult.success == true) {
+      logger.info(
+        `[SeatView.vue] seatResult is true, showing dialog: 選擇完成!`
+      );
       store.setupDialog("success", "選擇完成!");
       setTimeout(() => {
         store.closeDialog();
         store.clearUserData();
+        logger.info(
+          `[SeatView.vue] Closed dialog, cleared userData. Now navigating back to home`
+        );
         router.push("/");
         return;
       }, 3000);
     }
   } catch (error) {
-    logger.error(`Error during seat submission ${JSON.stringify(error)}`);
+    logger.error(
+      `[SeatView.vue] Error during seat submission: ${JSON.stringify(
+        error
+      )}, showing dialog: 抱歉! 系統發生錯誤，請洽導師!`
+    );
     store.setupDialog("error", "抱歉! 系統發生錯誤，請洽導師!");
-    setTimeout(() => store.closeDialog(), 3000);
+    setTimeout(() => {
+      store.closeDialog();
+      logger.info("Closing dialog");
+    }, 3000);
   }
 };
 const returnGenderedSeats = () => {
@@ -67,9 +94,16 @@ const returnGenderedSeats = () => {
 onMounted(() => {
   try {
     start();
-    watch([selectedSeat], () => reset());
+    watch([selectedSeat], () => {
+      reset();
+      logger.info(
+        `[SeatView.vue] Selected seat changed to ${JSON.stringify(
+          selectedSeat.value
+        )}, resetting and restarting countdown`
+      );
+    });
   } catch (err) {
-    logger.error(`onMounted error ${JSON.stringify(err)}`);
+    logger.error(`[SeatView.vue] onMounted error ${JSON.stringify(err)}`);
   }
 });
 </script>

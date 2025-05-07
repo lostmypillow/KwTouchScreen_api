@@ -2,7 +2,6 @@ import MainLayout from "./layouts/MainLayout.vue";
 import {
   createWebHistory,
   createRouter,
-  createWebHashHistory,
 } from "vue-router";
 import HomeView from "./views/HomeView.vue";
 import AuthView from "./views/AuthView.vue";
@@ -54,36 +53,6 @@ export default createRouter({
           component: NotFoundView,
         },
       ],
-      //   children: [
-      //     {
-      //       path: "home",
-      //       component: HomePage,
-      //     },
-      //     {
-      //       path: "alert",
-      //       component: AlertPage,
-      //     },
-      //     {
-      //       path: "auth/:callback",
-      //       component: AuthPage,
-      //     },
-      //     {
-      //       path: "seats",
-      //       component: SeatPage,
-      //     },
-      //     {
-      //       path: "survey",
-      //       component: SurveyPage,
-      //     },
-      //     {
-      //       path: "dashboard",
-      //       component: DashboardPage,
-      //     },
-      //     {
-      //       path: "awards",
-      //       component: AwardPage
-      //     }
-      //   ],
     },
   ],
 });

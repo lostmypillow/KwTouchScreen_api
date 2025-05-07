@@ -1,5 +1,4 @@
 import { ref, onUnmounted } from 'vue'
-
 export function useCountdown(initialTime = 30, onFinish?: () => void) {
   const timeLeft = ref(initialTime)
   const running = ref(false)

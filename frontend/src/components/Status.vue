@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted, Transition, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { ref, onUnmounted, Transition, watch } from "vue";
+import {  useRoute } from "vue-router";
 import { store } from "../store";
 const route = useRoute();
 
@@ -60,7 +60,7 @@ watch(
   () => store.ClassesToday.length,
   (newLength) => {
     console.log(
-      `[Status.vue] [${new Date().toISOString()}] watch: ClassesToday length changed to ${newLength}`
+      `[Status.vue] watch: ClassesToday length changed to ${newLength}`
     );
     if (newLength > 0) {
       startAlternatingClass();
@@ -74,6 +74,7 @@ watch(
 </script>
 
 <template>
+  
   <div class="flex flex-col w-full gap-4">
     <!-- time start -->
     <div
@@ -83,7 +84,6 @@ watch(
       <span class="noto-mono">{{ formatTime(currentTime) }}</span>
     </div>
     <!-- time end -->
-
     <div class="flex flex-col w-full px-4 items-center justify-between h-full">
       <Transition mode="out-in">
         <div

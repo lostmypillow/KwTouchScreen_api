@@ -8,7 +8,6 @@ const videoList = ref(["No files present on disk"]);
 const selectedVideo = ref("");
 const isUploading = ref(false);
 const isDeleting = ref(false);
-const connectedToServer = ref(false);
 
 const showAndLogError = (message, error) => {
   logger.error(`${message} ${JSON.stringify(error)}`);

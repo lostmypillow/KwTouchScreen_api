@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
-// import websocketService from "../../lib/websocketService";
 // Retry settings
 const RETRY_DELAY = 2000; // 2 seconds delay
 
@@ -31,12 +30,12 @@ const retryAction = async (action) => {
       return; // Success — exit loop
     } catch (error) {
       if (axios.isCancel(error)) {
-        // websocketService.sendMessage("client_error","[VideoPlayer.vue] Request aborted, skipping retry...");
+        logger.info("[VideoPlayer.vue] Request aborted, skipping retry...");
         retryInProgress = false;
         return;
       }
 
-      console.error("[VideoPlayer.vue] Retry failed:", error);
+      logger.error("[VideoPlayer.vue] Retry failed:", error);
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
     }
   }
@@ -46,7 +45,7 @@ const retryAction = async (action) => {
 
 // Function to get the next video
 const attemptGetNext = async (signal) => {
-  // websocketService.sendMessage("client_log","[VideoPlayer.vue] [" + new Date().toISOString() + "] Executing getNext()");
+  logger.info("[VideoPlayer.vue] Executing getNext()");
 
   const response = await axios.get(
     "http://" + import.meta.env.VITE_VIDEO_URL + "/next",
@@ -57,7 +56,7 @@ const attemptGetNext = async (signal) => {
     throw new Error("Failed to get next video or data is null");
   }
 
-  // websocketService.sendMessage("client_log","[VideoPlayer.vue] [" + new Date().toISOString() + "] Video file name received: ", response.data);
+  logger.info(`[VideoPlayer.vue] Video file name received: ${response.data}`);
 
   if (videoPlayerRef.value) {
     videoPlayerRef.value.src = '';
@@ -70,7 +69,7 @@ const attemptGetNext = async (signal) => {
 
 // Function to handle video player errors
 const handleError = (event) => {
-  console.error("[VideoPlayer.vue] Video playback error:", event);
+  logger.error(`[VideoPlayer.vue] Video playback error: ${JSON.stringify(event)}`);
   retryAction(attemptGetNext);
 };
 
@@ -84,7 +83,7 @@ const setupInactivityWatch = () => {
       videoPlayerRef.value.paused &&
       !videoPlayerRef.value.ended
     ) {
-      // websocketService.sendMessage("client_error","[VideoPlayer.vue] Detected inactivity — retrying...");
+      // logging.error([VideoPlayer.vue] Detected inactivity — retrying...");
       // retryAction(attemptGetNext);
     }
   }, 5000); // 5 seconds of inactivity triggers retry
@@ -99,7 +98,7 @@ watch(
 );
 
 onMounted(async () => {
-  // websocketService.sendMessage("client_log","[VideoPlayer.vue] Component mounted, calling getNext()");
+  logger.info("[VideoPlayer.vue] Component mounted, calling getNext()");
   await retryAction(attemptGetNext);
 
   // Attach error and inactivity watchers
@@ -111,7 +110,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  // websocketService.sendMessage("client_log","[VideoPlayer.vue] Component unmounted, stopping retries...");
+  logger.info("[VideoPlayer.vue] Component unmounted, stopping retries...");
   stopped = true;
   if (abortController) abortController.abort(); // Cancel any ongoing request
   if (inactivityTimeout) clearTimeout(inactivityTimeout);

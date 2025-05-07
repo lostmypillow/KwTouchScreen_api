@@ -23,7 +23,7 @@ const url = 'ws://' + import.meta.env.VITE_FASTAPI_URL +`/ws/android_touchscreen
 const getTimestamp = () => new Date().toISOString()
 
 const log = (level: 'log' | 'error' | 'warn', msg: string, data?: any) => {
-    console[level](`[WebSocket] ${msg}`, data || '')
+    console[level](`[WebSocket] ${JSON.stringify(msg)}`, data || '')
   
     // Optional: forward to server *only if socket is ready*
 
@@ -56,7 +56,7 @@ const initializeWebSocket = () => {
     try {
       receivedMessage.value = JSON.parse(event.data)
     } catch (error) {
-      log('error', `Message parse error: ${error}`)
+      log('error', `Message parse error: ${JSON.stringify(error)}`)
     }
   }
 
@@ -66,7 +66,7 @@ const initializeWebSocket = () => {
   }
 
   socket.value.onerror = (error) => {
-    log('error', `WebSocket Error: ${error}`)
+    log('error', `WebSocket Error: ${JSON.stringify(error)}`)
     socket.value?.close()
   }
 }
@@ -86,13 +86,11 @@ const sendMessage = (action: string, message: any, to = 'server') => {
   if (socket.value?.readyState === WebSocket.OPEN) {
     try {
       socket.value.send(JSON.stringify({
-        from: `Client Android Touchscreen`,
-        to,
         action,
         message
       }))
     } catch (e) {
-      log('error', `Send error: ${e}`)
+      log('error', `Send error: ${JSON.stringify(e)}`)
     }
   } else {
     log('warn', `Socket not open, cannot send: ${message}`)

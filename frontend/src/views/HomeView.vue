@@ -2,10 +2,10 @@
 import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";
 import { store } from "../store";
-import { useAPI } from "../composables/useAPI";
 const router = useRouter();
 const logger = useLogger();
 const routeToAuth = (authType) => {
+  logger.info(`[HomeView.vue] User tapped ${authType}`)
   store.authType = authType;
   if (authType == "mathSurvey") {
     store.surveyIs4Math = true;
@@ -13,9 +13,12 @@ const routeToAuth = (authType) => {
   }
 
   if (store.authType == "seat" && store.checkSeatsAvailbility() == false) {
+    logger.info("[HomeView.vue] store.authType == seat && store.checkSeatsAvailbility() == false, showing dialog: 目前沒有您可選的補位資料")
     store.setupDialog("error", `目前沒有您可選的補位資料`);
     store.showDialog();
+    
     setTimeout(() => store.closeDialog(), 3000);
+    logger.info("[HomeView.vue] Closed dialog.")
     return;
   }
 

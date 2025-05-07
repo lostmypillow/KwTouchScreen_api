@@ -5,19 +5,8 @@ import router from "./router";
 import { definePreset } from "@primevue/themes";
 import PrimeVue from "primevue/config";
 import Material from "@primevue/themes/material";
-import HomePage from "./views/HomeView.vue";
-import AuthPage from "./views/AuthView.vue";
-import SeatPage from "./pages/Touchscreen/SeatPage.vue";
-import AlertPage from "./pages/Touchscreen/AlertPage.vue";
-import SurveyPage from "./views/SurveyView.vue";
 import { autoAnimatePlugin } from "@formkit/auto-animate/vue";
 import App from "./App.vue";
-import DashboardPage from "./pages/DashboardPage.vue";
-import RootLayout from "./pages/Touchscreen/RootLayout.vue";
-import AwardPage from "./pages/Touchscreen/AwardPage.vue";
-// For circular progress
-import ProgressSpinner from 'primevue/progressspinner';
-
 
 const MyPreset = definePreset(Material, {
   semantic: {
