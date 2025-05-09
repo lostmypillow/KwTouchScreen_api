@@ -221,14 +221,14 @@ onMounted(() => {
             label="上一步"
             severity="secondary"
             icon="pi pi-arrow-left"
-            @click="activateCallback('1') && countdown.reset()"
+            @click="activateCallback('1') && reset()"
           />
           <Button
             label="下一步"
             :disabled="score == ''"
             icon="pi pi-arrow-right"
             iconPos="right"
-            @click="activateCallback('3') && countdown.reset()"
+            @click="activateCallback('3') && reset()"
           />
         </div>
       </StepPanel>
