@@ -59,7 +59,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unnecessary `/backend/.vscode` folder
 - `.env` and `config.py` files
 
+## Undocumented [0.3.x]
 
+## [0.4.2] - 2025-05-10
+
+### Added
+- `CHANGELOG.md` for changelog
+- sync_version.py to sync `package.json` version number to FastAPI constructor in `/backend/src/main.py`
+- Echo version number in `run.sh`
+
+### Changed
+- Moved `run.sh` to root
+- Updated NPM packages to patch axios security vulnerability
+- Bumped `package.json` version
+- Fixed Survey Page bug
+
+### Removed
+- Unnecessary Docker files in `/backend` folder
+- Unnecessary `/backend/.vscode` folder
+- `.env` and `config.py` files
 
 
 
